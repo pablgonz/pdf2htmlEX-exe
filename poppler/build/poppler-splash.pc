@@ -1,0 +1,8 @@
+prefix=D:/msys64/home/pablg/pdf2htmlEX-exe/target/mingw64
+libdir=D:/msys64/home/pablg/pdf2htmlEX-exe/target/mingw64/lib
+includedir=D:/msys64/home/pablg/pdf2htmlEX-exe/target/mingw64/include
+
+Name: poppler-splash
+Description: Splash backend for Poppler PDF rendering library
+Version: 0.89.0
+Requires: poppler = 0.89.0

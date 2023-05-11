@@ -2,6 +2,7 @@ imageBuild
 poppler-data
 ReleasePackage
 target
+work
 buildScripts/reSourceVersionEnvs
 brewFormula
 fontforge

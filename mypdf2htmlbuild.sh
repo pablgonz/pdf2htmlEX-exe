@@ -227,7 +227,7 @@ log_status "Copying the shared folders to $RELEASE/share/"
 cp -rf $TARGET/share/fontforge "$RELEASE/share/"
 cp -rf $TARGET/share/locale "$RELEASE/share/"
 cp -rf $TARGET/share/man "$RELEASE/share/"
-cp -rf $TARGET/share/pdf2htmlEX "$RELEASE/share/"
+cp -Rf $TARGET/share/pdf2htmlEX "$RELEASE/bin/data"
 rm -f "$RELEASE/share/prefs"
 
 cd $WORK
@@ -321,12 +321,6 @@ for f in $pdf2htmlexlibs; do
     strip "$f" -so "$RELEASE/bin/$filename"
 done
 
-log_note "Finish!!! .."
+log_note "* Finish!!! *"
 
 exit 1
-
-# libs not catch by ntldd
-RELEASE/bin/libcairo-2.dll
-RELEASE/binlibfontconfig-1.dll
-RELEASE/bin/libexpat-1.dll
-RELEASE/bin/libpixman-1-0.dll

@@ -1,0 +1,9 @@
+D:/msys64/home/pablg/pdf2htmlEX-exe/pdf2htmlEX/build/CMakeFiles/dist.dir
+D:/msys64/home/pablg/pdf2htmlEX-exe/pdf2htmlEX/build/CMakeFiles/pdf2htmlEX.dir
+D:/msys64/home/pablg/pdf2htmlEX-exe/pdf2htmlEX/build/CMakeFiles/pdf2htmlEX_resources.dir
+D:/msys64/home/pablg/pdf2htmlEX-exe/pdf2htmlEX/build/CMakeFiles/edit_cache.dir
+D:/msys64/home/pablg/pdf2htmlEX-exe/pdf2htmlEX/build/CMakeFiles/rebuild_cache.dir
+D:/msys64/home/pablg/pdf2htmlEX-exe/pdf2htmlEX/build/CMakeFiles/list_install_components.dir
+D:/msys64/home/pablg/pdf2htmlEX-exe/pdf2htmlEX/build/CMakeFiles/install.dir
+D:/msys64/home/pablg/pdf2htmlEX-exe/pdf2htmlEX/build/CMakeFiles/install/local.dir
+D:/msys64/home/pablg/pdf2htmlEX-exe/pdf2htmlEX/build/CMakeFiles/install/strip.dir
