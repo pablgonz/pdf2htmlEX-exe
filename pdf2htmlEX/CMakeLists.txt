@@ -1,10 +1,10 @@
 # leave this above project(pdf2htmlEX)
 # set default build type to Release
+cmake_minimum_required(VERSION 3.0.0 FATAL_ERROR)
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Build configuration (Debug, Release, RelWithDebInfo, MinSizeRel)")
 
 project(pdf2htmlEX)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-cmake_minimum_required(VERSION 2.6.0 FATAL_ERROR)
 
 option(ENABLE_SVG "Enable SVG support, for generating SVG background images and converting Type 3 fonts" ON)
 
@@ -22,7 +22,6 @@ add_custom_target(dist
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 find_package(PkgConfig)
-
 
 # SINCE we have a very intimate relationship with a particular version of 
 # poppler... we explicitly describe the poppler include and library 
@@ -42,7 +41,6 @@ set(POPPLER_LIBRARIES ${POPPLER_LIBRARIES}
   ${CMAKE_SOURCE_DIR}/../poppler/build/glib/libpoppler-glib.a
   ${CMAKE_SOURCE_DIR}/../poppler/build/libpoppler.a
 )
-
 
 if(ENABLE_SVG)
     pkg_check_modules(CAIRO REQUIRED cairo>=1.10.0)
@@ -91,11 +89,24 @@ else ()
   set(LIB_INTL_LIBRARIES "" )
 endif()
 
+# Need by MSYS2
+if(MINGW)
+message("REQUIRED by build pdf2htmlEX on msys2")
+find_package(Gettext REQUIRED)
+find_package(Intl REQUIRED)
+find_package(Iconv REQUIRED)
+find_package(LibXml2 REQUIRED)
+find_package(ZLIB REQUIRED)
+endif()
+
 set(PDF2HTMLEX_LIBS ${PDF2HTMLEX_LIBS}
   ${POPPLER_LIBRARIES}
   ${FONTFORGE_LIBRARIES}
   ${LIB_INTL_LIBRARIES}
   ${CAIRO_LIBRARIES}
+  ${Gettext_LIBRARIES}
+  -lintl
+  -llibiconv
   -ljpeg
   -lpng
   -lfontconfig
@@ -108,7 +119,6 @@ set(PDF2HTMLEX_LIBS ${PDF2HTMLEX_LIBS}
   -lz
   -lm
 )
-
 # debug build flags (overwrite default cmake debug flags)
 set(CMAKE_C_FLAGS_DEBUG "-ggdb -pg")
 set(CMAKE_CXX_FLAGS_DEBUG "-ggdb -pg")
@@ -271,6 +281,7 @@ install (FILES pdf2htmlEX.1 DESTINATION share/man/man1)
 
 ## tests:
 
+if(NOT MINGW)
 set(PDF2HTMLEX_PATH ${CMAKE_BINARY_DIR}/pdf2htmlEX)
 set(PDF2HTMLEX_TMPDIR /tmp/pdf2htmlEX/tmp)
 set(PDF2HTMLEX_DATDIR /tmp/pdf2htmlEX/dat)
@@ -286,3 +297,4 @@ configure_file(${CMAKE_SOURCE_DIR}/test/test.py.in ${CMAKE_SOURCE_DIR}/test/test
 include(CTest)
 add_test(test_basic   python ${CMAKE_SOURCE_DIR}/test/test_output.py)
 add_test(test_browser python ${CMAKE_SOURCE_DIR}/test/test_local_browser.py)
+endif()
