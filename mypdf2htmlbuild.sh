@@ -93,10 +93,8 @@ mv $POPPLER_DATA poppler-data
 # wget -nv https://raw.githubusercontent.com/msys2/MINGW-packages/master/mingw-w64-poppler/0001-nopython-generate-enums.patch
 # patch -p1 -i "0001-nopython-generate-enums.patch"
 
-if [ ! -f poppler/glib/poppler-private.h.orig ]; then
 log_note "Patch poppler-private.h for $POPPLER_VERSION .."
 patch -b "poppler/glib/poppler-private.h" "patches/poppler-private.patch"
-fi
 
 cd poppler
 mkdir build
@@ -234,10 +232,6 @@ rm -f "$RELEASE/share/prefs"
 
 cd $WORK
 
-log_status "Copying the Python extension dlls..."
-cp -f "$TARGET/lib/$PYVER/site-packages/fontforge.pyd" "$RELEASE/lib/$PYVER/site-packages/" || bail "Couldn't copy pyhook dlls"
-cp -f "$TARGET/lib/$PYVER/site-packages/psMat.pyd" "$RELEASE/lib/$PYVER/site-packages/" || bail "Couldn't copy pyhook dlls"
-
 ffex=`which fontforge.exe`
 MSYSROOT=`cygpath -w /`
 FFEXROOT=`cygpath -w $(dirname "${ffex}")`
@@ -245,7 +239,7 @@ log_note "The executable: $ffex"
 log_note "MSYS root: $MSYSROOT"
 log_note "FFEX root: $FFEXROOT"
 
-fflibs=`ntldd -D "$(dirname \"${ffex}\")" \
+fflibs=`ntldd -D "$(dirname \"${ffex}\")" -R "$ffex" \
 | grep =.*dll \
 | sed -e '/^[^\t]/ d'  \
 | sed -e 's/\t//'  \
@@ -257,13 +251,20 @@ fflibs=`ntldd -D "$(dirname \"${ffex}\")" \
 log_status "Copying the FontForge executable..."
 strip "$ffex" -so "$RELEASE/bin/fontforge.exe"
 
+log_status "Copying the libraries required by FontForge..."
+for f in $fflibs; do
+    filename="$(basename $f)"
+    filenoext="${filename%.*}"
+    strip "$f" -svo "$RELEASE/bin/$filename"
+done
+
 log_note "Installing msgmerge.exe need by pdf2htmlEX..."
 msgmex=`which msgmerge.exe`
 MSGMROOT=`cygpath -w $(dirname "${msgmex}")`
 log_note "The executable: $msgmex"
 strip "$msgmex" -svo "$RELEASE/bin/msgmerge.exe"
 
-msmglibs=`ntldd -D "$(dirname \"${msgmex}\")" \
+msmglibs=`ntldd -D "$(dirname \"${msgmex}\")" -R "$msgmex" \
 | grep =.*dll \
 | sed -e '/^[^\t]/ d'  \
 | sed -e 's/\t//'  \
@@ -284,7 +285,7 @@ POTRACERROOT=`cygpath -w $(dirname "${potrace}")`
 log_note "The executable: $potrace"
 strip "$potrace" -svo "$RELEASE/bin/potrace.exe"
 
-potracelibs=`ntldd -D "$(dirname \"${msgmex}\")" \
+potracelibs=`ntldd -D "$(dirname \"${potrace}\")" -R "$potrace" \
 | grep =.*dll \
 | sed -e '/^[^\t]/ d'  \
 | sed -e 's/\t//'  \
@@ -305,7 +306,7 @@ PDFHTMLEXROOT=`cygpath -w $(dirname "${pdf2htmlEXex}")`
 log_note "The executable: ${pdf2htmlEXex}"
 strip "$pdf2htmlEXex" -svo "$RELEASE/bin/pdf2htmlEX.exe"
 
-pdf2htmlexlibs=`ntldd -D "$(dirname \"${pdf2htmlEXex}\")" \
+pdf2htmlexlibs=`ntldd -D "$(dirname \"${pdf2htmlEXex}\")" -R "$pdf2htmlEXex" \
 | grep =.*dll \
 | sed -e '/^[^\t]/ d'  \
 | sed -e 's/\t//'  \
