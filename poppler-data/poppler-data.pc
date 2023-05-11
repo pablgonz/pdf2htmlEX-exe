@@ -1,8 +1,0 @@
-poppler_datadir=/home/pablg/pdf2htmlEX-exe/target/mingw64//share/pdf2htmlEX/poppler
-
-Name: poppler-data
-Description: Encoding files for use with poppler
-Version: 0.4.9
-
-Cflags: -DPOPPLER_DATADIR=/home/pablg/pdf2htmlEX-exe/target/mingw64//share/pdf2htmlEX/poppler
-
