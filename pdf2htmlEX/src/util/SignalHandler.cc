@@ -19,13 +19,12 @@ messages when FontForge can't save a file for us.
 
 **********/
 
-
 #include <stdio.h>
 #include <string.h>
 #include <string>
 #include <unistd.h>
 #include <signal.h>
-
+#include <iostream>
 #include "pdf2htmlEX-config.h"
 #include "util/ffw.h"
 #include <cairo/cairo.h>
@@ -95,11 +94,14 @@ const char* detailsBody = "no details recorded\n";
 const char* pdf2htmlEXTmpDir = NULL;
 const char* ffwAction        = NULL;
 
-struct sigaction act;
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result" 
+#ifdef _WIN64
+// Compilando bajo win32, utilizamos signal en lugar de sigaction
 void signalHandler(int sigInt) {
+#else
+// Compilando bajo un sistema UNIX, utilizamos sigaction
+struct sigaction act;
+void signalHandler(int sigInt) {
+#endif
   write(STDERR_FILENO, oopsMessage,        strlen(oopsMessage) );
 
   if (ffwAction) {
@@ -117,7 +119,6 @@ void signalHandler(int sigInt) {
   exit(-1);
 
 }
-#pragma GCC diagnostic pop
 
 #ifdef __cplusplus
 extern "C" {
@@ -130,16 +131,62 @@ void ffwClearAction(const char* anAction) {  ffwAction = NULL; }
 }
 #endif
 
+#ifdef _WIN64
 void setupSignalHandler(
   int argc, const char* argv[],
   const char* data_dir,
   const char* poppler_data_dir,
   const char* tmp_dir) {
-  // THIS MUST BE CALLED AFTER ARGUMENT PARSING
+  std::string detailInfo;
+  detailInfo = "Command line:\n";
+  for (int i = 0 ; i < argc ; i++ ){
+    detailInfo = detailInfo + "  " + std::to_string(i) + ": [" + argv[i] + "]\n" ;
+  }
+  detailInfo = detailInfo + "\n";
+  const pdf2htmlEX::FFWVersionInfo* ffwVersionInfo =
+  pdf2htmlEX::ffw_get_version_info();
+  detailInfo = detailInfo + "Version information:\n";
+  detailInfo = detailInfo + "  pdf2htmlEX version " + pdf2htmlEX::PDF2HTMLEX_VERSION + "\n";
+  detailInfo = detailInfo + "  Copyright 2012-2015 Lu Wang <coolwanglu@gmail.com> and other contributors\n";
+  detailInfo = detailInfo + "\n";
+  detailInfo = detailInfo + "Libraries:\n" ;
+  detailInfo = detailInfo + "  poppler " + POPPLER_VERSION + "\n";
+  detailInfo = detailInfo + "  libfontforge (date) " + ffwVersionInfo->versionDate + "\n";
+#if ENABLE_SVG
+  detailInfo = detailInfo + "  cairo " + cairo_version_string() + "\n";
+#endif
+  detailInfo = detailInfo + "\n";
+  detailInfo = detailInfo + "Default data-dir: " + data_dir + "\n";
+  detailInfo = detailInfo + "Default poppler-data-dir: " + poppler_data_dir + "\n";
+  detailInfo = detailInfo + "Default tmp-dir: " + tmp_dir + "\n";
+  detailInfo = detailInfo + "\n";
+  detailInfo = detailInfo + "Supported image formats:";
+#ifdef ENABLE_LIBPNG
+  detailInfo = detailInfo + " png";
+#endif
+#ifdef ENABLE_LIBJPEG
+  detailInfo = detailInfo + " jpg";
+#endif
+#if ENABLE_SVG
+  detailInfo = detailInfo + " svg";
+#endif
+  detailInfo = detailInfo + "\n\n";
+  detailsBody = strdup(detailInfo.c_str());
+  pdf2htmlEXTmpDir = strdup(tmp_dir);
+  signal(SIGILL, signalHandler);
+  signal(SIGFPE, signalHandler);
+  signal(SIGSEGV, signalHandler);
+  signal(SIGINT, signalHandler);
+  signal(SIGTERM, signalHandler);
+}
+#else
 
-  // Start by setting up the messages
-  //
-  // Construct the command line information
+// Compilando bajo un sistema UNIX, utilizamos sigaction
+void setupSignalHandler(
+  int argc, const char* argv[],
+  const char* data_dir,
+  const char* poppler_data_dir,
+  const char* tmp_dir) {
   std::string detailInfo;
   detailInfo = "Command line:\n";
   for (int i = 0 ; i < argc ; i++ ){
@@ -149,7 +196,7 @@ void setupSignalHandler(
 
   // Construct the version information
   const pdf2htmlEX::FFWVersionInfo* ffwVersionInfo =
-    pdf2htmlEX::ffw_get_version_info();
+  pdf2htmlEX::ffw_get_version_info();
 
   detailInfo = detailInfo + "Version information:\n";
   detailInfo = detailInfo + "  pdf2htmlEX version " + pdf2htmlEX::PDF2HTMLEX_VERSION + "\n";
@@ -181,12 +228,9 @@ void setupSignalHandler(
   detailsBody = strdup(detailInfo.c_str());
 
   pdf2htmlEXTmpDir = strdup(tmp_dir);
-
   // Now setup the signal handler
-  //
   memset(&act, 0, sizeof(act));
   act.sa_handler = signalHandler;
-  //
   sigaction(SIGILL,  &act, NULL);  // Illegal Instruction
   sigaction(SIGFPE,  &act, NULL);  // Floating-point exception
   sigaction(SIGSEGV, &act, NULL);  // Invalid memory reference
@@ -195,7 +239,7 @@ void setupSignalHandler(
 
   // All done
 }
-
+#endif
 
 /***
 int main(int argc, const char* argv[]) {
