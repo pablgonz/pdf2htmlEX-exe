@@ -1,5 +1,0 @@
-# Hashes of file build rules.
-21f6bceebcb4aeff76dceba61879ee66 CMakeFiles/dist
-d590812a4830383970c74026abdcaf37 CMakeFiles/pdf2htmlEX_resources
-6d6d3645b68718f6ea45284caa473172 D:/msys64/home/pablg/pdf2htmlEX-exe/pdf2htmlEX/share/base.min.css
-69963433800505ab2f69d8582e980ce5 D:/msys64/home/pablg/pdf2htmlEX-exe/pdf2htmlEX/share/pdf2htmlEX.min.js

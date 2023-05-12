@@ -79,5 +79,5 @@ endif()
 
 set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES "D:/msys64/mingw64/include/c++/13.1.0;D:/msys64/mingw64/include/c++/13.1.0/x86_64-w64-mingw32;D:/msys64/mingw64/include/c++/13.1.0/backward;D:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/13.1.0/include;D:/msys64/mingw64/include;D:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed")
 set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "stdc++;mingw32;gcc_s;gcc;moldname;mingwex;kernel32;pthread;advapi32;shell32;user32;kernel32;mingw32;gcc_s;gcc;moldname;mingwex;kernel32")
-set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "D:/msys64/mingw64/lib;D:/msys64/usr/local/lib;D:/msys64/lib;D:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/13.1.0;D:/msys64/mingw64/lib/gcc;D:/msys64/mingw64/x86_64-w64-mingw32/lib")
+set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "D:/msys64/mingw64/lib;/usr/local/lib;/lib;D:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/13.1.0;D:/msys64/mingw64/lib/gcc;D:/msys64/mingw64/x86_64-w64-mingw32/lib")
 set(CMAKE_CXX_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "")

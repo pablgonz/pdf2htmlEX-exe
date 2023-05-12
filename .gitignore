@@ -1,8 +1,10 @@
 imageBuild
 poppler-data
-ReleasePackage
-target
-work
+ReleasePackage/bin/*
+ReleasePackage/lib/
+ReleasePackage/share/
+work/
+target/
 buildScripts/reSourceVersionEnvs
 brewFormula
 fontforge

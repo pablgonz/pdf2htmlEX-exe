@@ -1,7 +1,17 @@
 #!/bin/bash
 # pdf2htmlEX build script.
-# Uses MSYS2/MinGW-w64
-# Author: Pablo
+# Use in MSYS2/MinGW-w64 for build pdf2htmlEX
+# Author: Pablo González L
+
+function dohelp() {
+    echo "Usage: `basename $0` [options]"
+    echo "  -h, --help            Prints this help message"
+    echo "  -d, --depsonly        Only install all dependencies for build"
+    echo "  -p, --skip-poppler    Skip build/install poppler"
+    echo "  -f, --skip-fontforge  Skip build/install fontforge"
+    echo "  -e, --only-exe        Only build pdf2htmlEX.exe"
+    exit $1
+}
 
 # Green text
 function log_note() {
@@ -28,7 +38,6 @@ FONTFORGE_SRC=$FONTFORGE_VERSION.tar.gz
 # Vars for MSYS2
 ARCHNUM="64"
 MINGVER=mingw64
-MINGOTHER=mingw32
 HOST="--build=x86_64-w64-mingw32 --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32"
 PMARCH=x86_64
 PMPREFIX="mingw-w64-$PMARCH"
@@ -41,10 +50,12 @@ RELEASE=$BASE/ReleasePackage/
 TARGET=$BASE/target/$MINGVER/
 WORK=$BASE/work/$MINGVER/
 
-# Make the output directories
+# Make output directories
+rm -R -f "$WORK"
 mkdir -p "$WORK"
+rm -R -f "$RELEASE/bin"
 mkdir -p "$RELEASE/bin"
-mkdir -p "$RELEASE/lib"
+rm -R -f "$RELEASE/share"
 mkdir -p "$RELEASE/share"
 
 # Set pkg-config path to also search mingw libs
@@ -63,7 +74,7 @@ export CPPFLAGS="${CFLAGS}"
 export LIBS=""
 
 # buid poppler
-log_note "* Build poopler $POPPLER_VERSION *"
+log_note "*** Build poopler $POPPLER_VERSION ***"
 
 if [ ! -f "$BASE/$POPPLER_VERSION.tar.xz" ]; then
     log_status "Getting $POPPLER_VERSION.tar.xz .."
@@ -78,10 +89,10 @@ mv $POPPLER_VERSION poppler
 
 # get poppler-data .tar.gz
 if [ ! -f $POPPLER_DATA.tar.gz ]; then
-	log_note "Getting $POPPLER_DATA.tar.gz .."
+	log_status "Getting $POPPLER_DATA.tar.gz .."
 	wget -q https://poppler.freedesktop.org/$POPPLER_DATA.tar.gz
 else
-	log_note "Found $POPPLER_DATA.tar.gz .."
+	log_status "Found $POPPLER_DATA.tar.gz .."
 fi
 
 # unpack poppler-data
@@ -89,11 +100,7 @@ tar xf $POPPLER_DATA.tar.gz
 rm -rf poppler-data
 mv $POPPLER_DATA poppler-data
 
-# patch poppler-23.04
-# wget -nv https://raw.githubusercontent.com/msys2/MINGW-packages/master/mingw-w64-poppler/0001-nopython-generate-enums.patch
-# patch -p1 -i "0001-nopython-generate-enums.patch"
-
-log_note "Patch poppler-private.h for $POPPLER_VERSION .."
+log_status "Patch poppler-private.h for $POPPLER_VERSION .."
 patch -b "poppler/glib/poppler-private.h" "patches/poppler-private.patch"
 
 cd poppler
@@ -131,12 +138,11 @@ cmake -G "Ninja" -Wno-dev                \
   -DWITH_Cairo=ON                        \
   ..
 
-cmake --build ./ 
-cmake --build ./ --target install
+#cmake --build ./ || bail "ERROR!!: cmake --build ./ (poppler)"
+cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (poppler)"
 cd $BASE
 
-log_note "* Build fontforge $FONTFORGE_VERSION *"
-
+log_note "*** Build fontforge $FONTFORGE_VERSION ***"
 # get fontforge
 if [ ! -f $FONTFORGE_SRC ]; then
 	log_status "Getting fontforge source $FONTFORGE_SRC .."
@@ -145,11 +151,10 @@ else
 	log_status "Found fontforge source $FONTFORGE_SRC .."
 fi
 
-# unpack poppler
+# unpack fontforge
 tar xf $FONTFORGE_SRC
 rm -rf fontforge
 mv fontforge-$FONTFORGE_VERSION fontforge
-
 cd fontforge
 mkdir build
 cd build
@@ -185,60 +190,45 @@ cmake -G "Ninja" -Wno-dev                   \
   -DTHEME:ENUM="tango"                      \
   ..
 
-cmake --build ./ 
-cmake --build ./ --target install
+cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (fontforge)"
 cd $BASE
 
-log_note  "* Build pdf2htmEX *"
-
-## patch StringFormatter.cc
-#if [ ! -f pdf2htmlEX/src/StringFormatter.cc.orig ]; then
-	#log_status "Patch StringFormatter.cc .."
-	#patch -b "pdf2htmlEX/src/StringFormatter.cc" "patches/StringFormatter.patch"
-#fi
-
-## patch StringFormatter.h
-#if [ ! -f pdf2htmlEX/src/StringFormatter.h.orig ]; then
-	#log_status "Patch StringFormatter.h .."
-	#patch -b "pdf2htmlEX/src/StringFormatter.h" "patches/StringFormatter_h.patch"
-#fi
-
+log_note  "*** Build pdf2htmlEX.exe ***"
 cd pdf2htmlEX
 rm -rf build
 mkdir build
 cd build
-
-cmake -Wno-dev -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$TARGET" ..
-make -j 8 -s install || bail "ERROR!!: make -j 8 -s instal from pdf2htmlEX"
-
-cd $BASE/poppler-data
-
-log_note "* Install poppler-data "
-make -j 8 -s install prefix="$TARGET" datadir="$TARGET/share/pdf2htmlEX" || bail "ERROR!!: make -j 8 -s install from poppler-data"
+cmake -G "Ninja" -Wno-dev          \
+  -DCMAKE_BUILD_TYPE=Release       \
+  -DCMAKE_INSTALL_PREFIX="$TARGET" \
+  ..
+  
+cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (pdf2htmlEX)"
 cd $BASE
 
-log_note "* Assembling the release package pdf2htmlEX.exe *"
+# poppler-data
+log_status "Install poppler-data "
+cd $BASE/poppler-data
+make "-j $(nproc)" -s install prefix="$TARGET" datadir="$TARGET/share/pdf2htmlEX" || bail "ERROR!!: make -j $(nproc) -s install (poppler-data)"
+cd $BASE
 
-log_status "Copying glib spawn helpers..."
-strip "/$MINGVER/bin/gspawn-win$ARCHNUM-helper.exe" -so "$RELEASE/bin/gspawn-win$ARCHNUM-helper.exe" || bail "Glib spawn helper not found!"
-strip "/$MINGVER/bin/gspawn-win$ARCHNUM-helper-console.exe" -so "$RELEASE/bin/gspawn-win$ARCHNUM-helper-console.exe" || bail "Glib spawn helper not found!"
-
-log_status "Copying the shared folders to $RELEASE/share/"
+# copy folders
+log_status "Copying folders and libs need by pdf2htmlEX.exe "
 cp -rf $TARGET/share/fontforge "$RELEASE/share/"
 cp -rf $TARGET/share/locale "$RELEASE/share/"
 cp -rf $TARGET/share/man "$RELEASE/share/"
 cp -Rf $TARGET/share/pdf2htmlEX "$RELEASE/bin/data"
-rm -f "$RELEASE/share/prefs"
+rm -rf "$RELEASE/share/fontforge/prefs"
+rm -Rf "$RELEASE/share/man"
+rm -Rf "$RELEASE/bin/data/pkgconfig"
 
+#copy libs
 cd $WORK
 
+# fontforge
 ffex=`which fontforge.exe`
 MSYSROOT=`cygpath -w /`
 FFEXROOT=`cygpath -w $(dirname "${ffex}")`
-log_note "The executable: $ffex"
-log_note "MSYS root: $MSYSROOT"
-log_note "FFEX root: $FFEXROOT"
-
 fflibs=`ntldd -D "$(dirname \"${ffex}\")" -R "$ffex" \
 | grep =.*dll \
 | sed -e '/^[^\t]/ d'  \
@@ -248,22 +238,15 @@ fflibs=`ntldd -D "$(dirname \"${ffex}\")" -R "$ffex" \
 | grep -F -e "$MSYSROOT" -e "$FFEXROOT" \
 `
 
-log_status "Copying the FontForge executable..."
-strip "$ffex" -so "$RELEASE/bin/fontforge.exe"
-
-log_status "Copying the libraries required by FontForge..."
 for f in $fflibs; do
     filename="$(basename $f)"
     filenoext="${filename%.*}"
-    strip "$f" -svo "$RELEASE/bin/$filename"
+    strip "$f" -so "$RELEASE/bin/$filename"
 done
 
-log_note "Installing msgmerge.exe need by pdf2htmlEX..."
+# gettext
 msgmex=`which msgmerge.exe`
 MSGMROOT=`cygpath -w $(dirname "${msgmex}")`
-log_note "The executable: $msgmex"
-strip "$msgmex" -svo "$RELEASE/bin/msgmerge.exe"
-
 msmglibs=`ntldd -D "$(dirname \"${msgmex}\")" -R "$msgmex" \
 | grep =.*dll \
 | sed -e '/^[^\t]/ d'  \
@@ -276,15 +259,12 @@ msmglibs=`ntldd -D "$(dirname \"${msgmex}\")" -R "$msgmex" \
 for f in $msmglibs; do
     filename="$(basename $f)"
     filenoext="${filename%.*}"
-    strip "$f" -svo "$RELEASE/bin/$filename"
+    strip "$f" -so "$RELEASE/bin/$filename"
 done
 
-log_note "Installing potrace.exe need by fontforge..."
+# potrace (fontforge)
 potrace=`which potrace.exe`
 POTRACERROOT=`cygpath -w $(dirname "${potrace}")`
-log_note "The executable: $potrace"
-strip "$potrace" -svo "$RELEASE/bin/potrace.exe"
-
 potracelibs=`ntldd -D "$(dirname \"${potrace}\")" -R "$potrace" \
 | grep =.*dll \
 | sed -e '/^[^\t]/ d'  \
@@ -297,15 +277,13 @@ potracelibs=`ntldd -D "$(dirname \"${potrace}\")" -R "$potrace" \
 for f in $potracelibs; do
     filename="$(basename $f)"
     filenoext="${filename%.*}"
-    strip "$f" -svo "$RELEASE/bin/$filename"
+    strip "$f" -so "$RELEASE/bin/$filename"
 done
 
-log_note "Installing custom binaries pdf2htlmEX ..."
+# pdf2htmlEX
 pdf2htmlEXex=`which pdf2htmlEX.exe`
 PDFHTMLEXROOT=`cygpath -w $(dirname "${pdf2htmlEXex}")`
-log_note "The executable: ${pdf2htmlEXex}"
-strip "$pdf2htmlEXex" -svo "$RELEASE/bin/pdf2htmlEX.exe"
-
+strip "$pdf2htmlEXex" -so "$RELEASE/bin/pdf2htmlEX.exe"
 pdf2htmlexlibs=`ntldd -D "$(dirname \"${pdf2htmlEXex}\")" -R "$pdf2htmlEXex" \
 | grep =.*dll \
 | sed -e '/^[^\t]/ d'  \
@@ -321,6 +299,6 @@ for f in $pdf2htmlexlibs; do
     strip "$f" -so "$RELEASE/bin/$filename"
 done
 
-log_note "* Finish!!! *"
+log_note "*** Finish!!! ***"
 
 exit 1
