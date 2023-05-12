@@ -94,7 +94,7 @@ const char* detailsBody = "no details recorded\n";
 const char* pdf2htmlEXTmpDir = NULL;
 const char* ffwAction        = NULL;
 
-#ifdef _WIN64
+#ifdef __WIN32__
 // Compilando bajo win32, utilizamos signal en lugar de sigaction
 void signalHandler(int sigInt) {
 #else
@@ -131,7 +131,7 @@ void ffwClearAction(const char* anAction) {  ffwAction = NULL; }
 }
 #endif
 
-#ifdef _WIN64
+#ifdef __WIN32__
 void setupSignalHandler(
   int argc, const char* argv[],
   const char* data_dir,

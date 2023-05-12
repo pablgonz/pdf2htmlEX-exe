@@ -2,17 +2,8 @@
 # pdf2htmlEX build script.
 # Use in MSYS2/MinGW-w64 for build pdf2htmlEX
 # Author: Pablo González L
-
-function dohelp() {
-    echo "Usage: `basename $0` [options]"
-    echo "  -h, --help            Prints this help message"
-    echo "  -d, --depsonly        Only install all dependencies for build"
-    echo "  -p, --skip-poppler    Skip build/install poppler"
-    echo "  -f, --skip-fontforge  Skip build/install fontforge"
-    echo "  -e, --only-exe        Only build pdf2htmlEX.exe"
-    exit $1
-}
-
+# Debemos intentar capturar java desde msys2
+# cmd //c 'REG QUERY HKCU\Environment -v PATH'| grep '^    PATH'| sed 's/    PATH    REG_EXPAND_SZ    //' | sed 's/;/\n/g' | grep 'java'
 # Green text
 function log_note() {
     echo -ne "\e[32m"; echo "$@"; echo -ne "\e[0m"
@@ -27,28 +18,144 @@ function bail () {
     exit 1
 }
 
-# Set working folders and vars
-export PATH=$PATH:"/c/java/jdk-20.0.1/bin"
-export PDF2HTMLEX_VERSION=0.18.8.rc1
-export POPPLER_VERSION=poppler-0.89.0
-export POPPLER_DATA=poppler-data-0.4.9
-export FONTFORGE_VERSION=20220308
-FONTFORGE_SRC=$FONTFORGE_VERSION.tar.gz
+# Red text
+function log_error() {
+    echo -ne "\e[31m"; echo "$@"; echo -ne "\e[0m"
+}
 
-# Vars for MSYS2
-ARCHNUM="64"
-MINGVER=mingw64
-HOST="--build=x86_64-w64-mingw32 --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32"
-PMARCH=x86_64
-PMPREFIX="mingw-w64-$PMARCH"
+# vars for terminal
+yes=0
+skippoppler=0
+skipfontforge=0
+onlypdf2htmlEX=0
+depsonly=0
+
+function dohelp() {
+    echo "Usage: `basename $0` [options]"
+    echo "  -h, --help             Prints this help message"
+    echo "  -y, --yes              Say yes to all build script prompts"
+    echo "  -d, --depsonly         Only install dependencies for MSYS2"
+    echo "  -P, --skip-poppler     Skip build/install poppler"
+    echo "  -F, --skip-fontforge   Skip build/install fontforge"
+    echo "  -E, --only-pdf2htmlEX  Only build/install pdf2htmlEX.exe"
+    exit $1
+}
+
+# Retrieve input arguments to script
+optspec=":hydPFE-:"
+while getopts "$optspec" optchar; do
+    case "${optchar}" in
+        -)
+            case "${OPTARG}" in
+                skippoppler)
+                    skippoppler=$((1-skippoppler)) ;;
+                skipfontforge)
+                    skipfontforge=$((1-skipfontforge)) ;;
+                onlypdf2htmlEX)
+                    onlypdf2htmlEX=$((1-onlypdf2htmlEX)) ;;
+                depsonly)
+                    depsonly=$((1-depsonly)) ;;
+                yes)
+                    yes=$((1-yes)) ;;
+                help)
+                    dohelp 0;;
+                *)
+                    log_error "Unknown option --${OPTARG}"
+                    dohelp 1 ;;
+            esac;;
+        P)
+            skippoppler=$((1-skippoppler)) ;;
+        F)
+            skipfontforge=$((1-skipfontforge)) ;;
+        E)
+            onlypdf2htmlEX=$((1-onlypdf2htmlEX)) ;;
+        d)
+            depsonly=$((1-depsonly)) ;;
+        y)
+            yes=$((1-yes)) ;;
+        h)
+            dohelp 0 ;;
+        *)
+            log_error "Unknown argument -${OPTARG}"
+            dohelp 1 ;;
+    esac
+done
+
+# detect arch
+function detect_arch_switch () {
+    local from="$(ls -1 .building-* 2>/dev/null)"
+    local to=".building-$1"
+    
+    if [ ! -z "$from" ] && [ "$from" != "$to" ]; then
+        if (($yes)); then
+            git clean -dxf "$RELEASE" || bail "Could not reset ReleasePackage"
+        else
+            read -p "Architecture change detected! ReleasePackage must be reset. Continue? [y/N]: " arch_confirm
+            case $arch_confirm in
+                [Yy]* )
+                    git clean -dxf "$RELEASE" || bail "Could not reset ReleasePackage"
+                    ;;
+                * ) bail "Not overwriting ReleasePackage" ;;
+            esac
+        fi
+    fi
+    
+    rm -f $from
+    touch $to
+}
 
 # tree for build/release
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 RELEASE=$BASE/ReleasePackage/
 
+# Determine if we're building 32 or 64 bit.
+if [ "$MSYSTEM" = "MINGW32" ]; then
+    log_note "Building 32-bit version!"
+
+    ARCHNUM="32"
+    MINGVER=mingw32
+    MINGOTHER=mingw64
+    HOST="--build=i686-w64-mingw32 --host=i686-w64-mingw32 --target=i686-w64-mingw32"
+    PMARCH=i686
+    PMPREFIX="mingw-w64-$PMARCH"
+elif [ "$MSYSTEM" = "MINGW64" ]; then
+    log_note "Building 64-bit version!"
+
+    ARCHNUM="64"
+    MINGVER=mingw64
+    MINGOTHER=mingw32
+    HOST="--build=x86_64-w64-mingw32 --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32"
+    PMARCH=x86_64
+    PMPREFIX="mingw-w64-$PMARCH"
+elif [ "$MSYSTEM" = "UCRT64" ]; then
+    log_note "Building 64-bit ucrt version!"
+    
+    ARCHNUM="64"
+    MINGVER=ucrt64
+    MINGOTHER=mingw32
+    HOST="--build=x86_64-w64-mingw32 --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32"
+    PMARCH=ucrt-x86_64
+    PMPREFIX="mingw-w64-$PMARCH"
+else
+    bail "Unknown build system!"
+fi
+
+# Set working folders and vars
+export PATH=$PATH:"/c/java/jdk-20.0.1/bin"
+export PDF2HTMLEX_VERSION=0.18.8.rc1-x"$ARCHNUM"
+export POPPLER_VERSION=poppler-0.89.0
+# export POPPLER_DATA=poppler-data-0.4.9
+export POPPLER_DATA=poppler-data-0.4.12
+export FONTFORGE_VERSION=20220308
+FONTFORGE_SRC=$FONTFORGE_VERSION.tar.gz
+
+# Early detection
+detect_arch_switch $MINGVER
+
 # Common options
 TARGET=$BASE/target/$MINGVER/
 WORK=$BASE/work/$MINGVER/
+PMTEST="$BASE/.pacman-$MINGVER-installed"
 
 # Make output directories
 rm -R -f "$WORK"
@@ -72,6 +179,34 @@ export LDFLAGS="-L/$MINGVER/lib -L/usr/local/lib -L/lib"
 export CFLAGS="-DWIN32 -I/$MINGVER/include -I/usr/local/include -I/include -g"
 export CPPFLAGS="${CFLAGS}"
 export LIBS=""
+
+# Install all the available precompiled binaries
+if (( ! $depsonly )) && [ ! -f $PMTEST ]; then
+    log_status "First time run; installing MSYS and MinGW libraries..."
+    pacman -Sy --noconfirm
+
+    IOPTS="-S --noconfirm --needed"
+
+    # Install MinGW related stuff
+    pacman $IOPTS $PMPREFIX-{gcc,gmp,ntldd-git,gettext,libiconv,cmake,ninja,ccache,boost,gobject-introspection,potrace}
+
+    # Install the base MSYS packages needed
+    pacman $IOPTS diffutils findutils make patch tar pkgconf winpty git
+
+    # Libraries
+    log_status "Installing precompiled devel libraries..."
+
+    pacman $IOPTS $PMPREFIX-{libspiro,libuninameslist,lcms2,libtiff,cairo}
+    pacman $IOPTS $PMPREFIX-{zlib,libpng,giflib,libjpeg-turbo,libxml2,openjpeg2}
+    pacman $IOPTS $PMPREFIX-{freetype,fontconfig,glib2,pixman,harfbuzz,woff2}
+    
+    touch $PMTEST
+    log_note "Finished installing precompiled libraries!"
+else
+    log_note "Detected that precompiled libraries are already installed."
+    log_note "  Delete '$PMTEST' and run this script again if"
+    log_note "  this is not the case."
+fi # pacman installed
 
 # buid poppler
 log_note "*** Build poopler $POPPLER_VERSION ***"
@@ -110,18 +245,18 @@ cd build
 cmake -G "Ninja" -Wno-dev                \
   -DCMAKE_BUILD_TYPE=Release             \
   -DCMAKE_INSTALL_PREFIX="$TARGET"       \
-  -DENABLE_UNSTABLE_API_ABI_HEADERS=OFF  \
+  -DENABLE_UNSTABLE_API_ABI_HEADERS=ON   \
   -DBUILD_GTK_TESTS=OFF                  \
   -DBUILD_QT5_TESTS=OFF                  \
   -DBUILD_CPP_TESTS=OFF                  \
   -DENABLE_SPLASH=ON                     \
   -DENABLE_UTILS=OFF                     \
-  -DENABLE_CPP=OFF                       \
+  -DENABLE_CPP=ON                        \
   -DENABLE_GLIB=ON                       \
-  -DENABLE_GOBJECT_INTROSPECTION=OFF     \
+  -DENABLE_GOBJECT_INTROSPECTION=ON      \
   -DENABLE_GTK_DOC=OFF                   \
   -DENABLE_QT5=OFF                       \
-  -DENABLE_LIBOPENJPEG="none"            \
+  -DENABLE_LIBOPENJPEG="openjpeg2"    \
   -DENABLE_CMS="none"                    \
   -DENABLE_DCTDECODER="libjpeg"          \
   -DENABLE_LIBCURL=OFF                   \
@@ -138,7 +273,6 @@ cmake -G "Ninja" -Wno-dev                \
   -DWITH_Cairo=ON                        \
   ..
 
-#cmake --build ./ || bail "ERROR!!: cmake --build ./ (poppler)"
 cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (poppler)"
 cd $BASE
 

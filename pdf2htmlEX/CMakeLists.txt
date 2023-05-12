@@ -105,6 +105,7 @@ set(PDF2HTMLEX_LIBS ${PDF2HTMLEX_LIBS}
   ${LIB_INTL_LIBRARIES}
   ${CAIRO_LIBRARIES}
   ${Gettext_LIBRARIES}
+  -llibopenjp2
   -lintl
   -llibiconv
   -ljpeg
