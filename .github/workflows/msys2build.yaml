@@ -12,4 +12,4 @@ jobs:
       shell: pwsh
       run:  Get-Command java  | select Source
     - uses: msys2/setup-msys2@v2
-    - run: powershell -Command "Get-Command java  | select Source" | grep java
+    - run: powershell -Command "Get-Command java  | select Source" | sed 's/java.exe//' | sed 's/C\:/\/c/' | sed 's:\\:\/:g'
