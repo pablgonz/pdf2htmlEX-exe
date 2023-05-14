@@ -1,9 +1,7 @@
 # Build pdf2htmlEX for Windows
 name: Build pdf2htmlEX for Windows
-on:
-  schedule:
-    # Run every tuesday and saturday at 02:48. The time has been chosen at random.
-    - cron: '48 2 * * 2,6'
+
+on: [push]
 
 jobs:
   build:
