@@ -11,7 +11,6 @@ jobs:
     - name: Set java location in file
       shell: pwsh
       run:  Get-Command java  | select Source > javalocation.txt
-    - name: Build pdf2htmlEX for windows
     - uses: msys2/setup-msys2@v2
     - shell: msys2 {0}
       run:  sh mypdf2htmlbuild.sh
