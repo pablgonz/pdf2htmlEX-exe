@@ -47,11 +47,11 @@ while getopts "$optspec" optchar; do
     case "${optchar}" in
         -)
             case "${OPTARG}" in
-                skippoppler)
+                skip-poppler)
                     skippoppler=$((1-skippoppler)) ;;
-                skipfontforge)
+                skip-fontforge)
                     skipfontforge=$((1-skipfontforge)) ;;
-                onlypdf2htmlEX)
+                only-pdf2htmlEX)
                     onlypdf2htmlEX=$((1-onlypdf2htmlEX)) ;;
                 depsonly)
                     depsonly=$((1-depsonly)) ;;
@@ -85,7 +85,7 @@ done
 function detect_arch_switch () {
     local from="$(ls -1 .building-* 2>/dev/null)"
     local to=".building-$1"
-    
+
     if [ ! -z "$from" ] && [ "$from" != "$to" ]; then
         if (($yes)); then
             git clean -dxf "$RELEASE" || bail "Could not reset ReleasePackage"
@@ -99,7 +99,7 @@ function detect_arch_switch () {
             esac
         fi
     fi
-    
+
     rm -f $from
     touch $to
 }
@@ -129,7 +129,7 @@ elif [ "$MSYSTEM" = "MINGW64" ]; then
     PMPREFIX="mingw-w64-$PMARCH"
 elif [ "$MSYSTEM" = "UCRT64" ]; then
     log_note "Building 64-bit ucrt version!"
-    
+
     ARCHNUM="64"
     MINGVER=ucrt64
     MINGOTHER=mingw32
@@ -142,11 +142,11 @@ fi
 
 # Set working folders and vars
 export PATH=$PATH:"/c/java/jdk-20.0.1/bin"
-export PDF2HTMLEX_VERSION=0.18.8.rc1-x"$ARCHNUM"
-export POPPLER_VERSION=poppler-0.89.0
-# export POPPLER_DATA=poppler-data-0.4.9
+export PDF2HTMLEX_VERSION=0.18.8.rc1-"($ARCHNUM-bit)"
+# current found poppler-21.02.0 (no patch)
+export POPPLER_VERSION=poppler-21.02.0
 export POPPLER_DATA=poppler-data-0.4.12
-export FONTFORGE_VERSION=20220308
+export FONTFORGE_VERSION=20230101
 FONTFORGE_SRC=$FONTFORGE_VERSION.tar.gz
 
 # Early detection
@@ -184,23 +184,21 @@ export LIBS=""
 if (( ! $depsonly )) && [ ! -f $PMTEST ]; then
     log_status "First time run; installing MSYS and MinGW libraries..."
     pacman -Sy --noconfirm
-
     IOPTS="-S --noconfirm --needed"
 
     # Install MinGW related stuff
-    pacman $IOPTS $PMPREFIX-{gcc,gmp,ntldd-git,gettext,libiconv,cmake,ninja,ccache,boost,gobject-introspection,potrace}
+    pacman $IOPTS $PMPREFIX-{gcc,gmp,ntldd-git,gettext,libiconv,cmake,ninja,ccache,cc,gobject-introspection}
 
     # Install the base MSYS packages needed
-    pacman $IOPTS diffutils findutils make patch tar pkgconf winpty git
+    pacman $IOPTS diffutils findutils make patch tar pkgconf git
 
     # Libraries
     log_status "Installing precompiled devel libraries..."
-
     pacman $IOPTS $PMPREFIX-{libspiro,libuninameslist,lcms2,libtiff,cairo}
     pacman $IOPTS $PMPREFIX-{zlib,libpng,giflib,libjpeg-turbo,libxml2,openjpeg2}
-    pacman $IOPTS $PMPREFIX-{freetype,fontconfig,glib2,pixman,harfbuzz,woff2}
-    
+    pacman $IOPTS $PMPREFIX-{freetype,fontconfig,glib2,pixman,harfbuzz}
     touch $PMTEST
+
     log_note "Finished installing precompiled libraries!"
 else
     log_note "Detected that precompiled libraries are already installed."
@@ -209,122 +207,125 @@ else
 fi # pacman installed
 
 # buid poppler
-log_note "*** Build poopler $POPPLER_VERSION ***"
+if (( ! $skippoppler )) ; then
+    log_note "*** Build poopler $POPPLER_VERSION ***"
 
-if [ ! -f "$BASE/$POPPLER_VERSION.tar.xz" ]; then
-    log_status "Getting $POPPLER_VERSION.tar.xz .."
-	wget https://poppler.freedesktop.org/$POPPLER_VERSION.tar.xz
-else
-	log_status "Found $POPPLER_VERSION.tar.xz .."
+    if [ ! -f "$BASE/$POPPLER_VERSION.tar.xz" ]; then
+        log_status "Getting $POPPLER_VERSION.tar.xz .."
+        wget https://poppler.freedesktop.org/$POPPLER_VERSION.tar.xz
+    else
+        log_status "Found $POPPLER_VERSION.tar.xz .."
+    fi
+    # unpack poppler
+    tar xf $POPPLER_VERSION.tar.xz
+    rm -rf poppler
+    mv $POPPLER_VERSION poppler
+    # get poppler-data .tar.gz
+    if [ ! -f $POPPLER_DATA.tar.gz ]; then
+        log_status "Getting $POPPLER_DATA.tar.gz .."
+        wget https://poppler.freedesktop.org/$POPPLER_DATA.tar.gz
+    else
+        log_status "Found $POPPLER_DATA.tar.gz .."
+    fi
+    # unpack poppler-data
+    tar xf $POPPLER_DATA.tar.gz
+    rm -rf poppler-data
+    mv $POPPLER_DATA poppler-data
+
+    #log_status "Patch poppler-private.h for $POPPLER_VERSION .."
+    #patch -b "poppler/glib/poppler-private.h" "patches/poppler-private-21.02.0.patch"
+
+    cd poppler
+    mkdir build
+    cd build
+
+    cmake -G "Ninja" -Wno-dev            \
+    -DCMAKE_BUILD_TYPE=Release           \
+    -DCMAKE_INSTALL_PREFIX="$TARGET"     \
+    -DENABLE_UNSTABLE_API_ABI_HEADERS=ON \
+    -DBUILD_GTK_TESTS=OFF                \
+    -DBUILD_QT5_TESTS=OFF                \
+    -DBUILD_GTK_TESTS=OFF                \
+    -DENABLE_QT5=OFF                     \
+    -DBUILD_CPP_TESTS=OFF                \
+    -DENABLE_SPLASH=ON                   \
+    -DENABLE_UTILS=OFF                   \
+    -DENABLE_CPP=ON                      \
+    -DENABLE_GLIB=ON                     \
+    -DENABLE_GOBJECT_INTROSPECTION=ON    \
+    -DENABLE_GTK_DOC=OFF                 \
+    -DENABLE_LIBOPENJPEG="openjpeg2"     \
+    -DENABLE_CMS="lcms2"                 \
+    -DENABLE_DCTDECODER="libjpeg"        \
+    -DENABLE_LIBCURL=OFF                 \
+    -DENABLE_ZLIB=ON                     \
+    -DENABLE_ZLIB_UNCOMPRESS=OFF         \
+    -DUSE_FLOAT=OFF                      \
+    -DBUILD_SHARED_LIBS=OFF              \
+    -DRUN_GPERF_IF_PRESENT=OFF           \
+    -DEXTRA_WARN=OFF                     \
+    -DWITH_JPEG=ON                       \
+    -DWITH_PNG=ON                        \
+    -DWITH_TIFF=ON                       \
+    -DWITH_NSS3=OFF                      \
+    -DWITH_Cairo=ON                      \
+    ..
+
+    cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (poppler)"
 fi
-# unpack poppler
-tar xf $POPPLER_VERSION.tar.xz
-rm -rf poppler
-mv $POPPLER_VERSION poppler
 
-# get poppler-data .tar.gz
-if [ ! -f $POPPLER_DATA.tar.gz ]; then
-	log_status "Getting $POPPLER_DATA.tar.gz .."
-	wget -q https://poppler.freedesktop.org/$POPPLER_DATA.tar.gz
-else
-	log_status "Found $POPPLER_DATA.tar.gz .."
-fi
-
-# unpack poppler-data
-tar xf $POPPLER_DATA.tar.gz
-rm -rf poppler-data
-mv $POPPLER_DATA poppler-data
-
-log_status "Patch poppler-private.h for $POPPLER_VERSION .."
-patch -b "poppler/glib/poppler-private.h" "patches/poppler-private.patch"
-
-cd poppler
-mkdir build
-cd build
-
-cmake -G "Ninja" -Wno-dev                \
-  -DCMAKE_BUILD_TYPE=Release             \
-  -DCMAKE_INSTALL_PREFIX="$TARGET"       \
-  -DENABLE_UNSTABLE_API_ABI_HEADERS=ON   \
-  -DBUILD_GTK_TESTS=OFF                  \
-  -DBUILD_QT5_TESTS=OFF                  \
-  -DBUILD_CPP_TESTS=OFF                  \
-  -DENABLE_SPLASH=ON                     \
-  -DENABLE_UTILS=OFF                     \
-  -DENABLE_CPP=ON                        \
-  -DENABLE_GLIB=ON                       \
-  -DENABLE_GOBJECT_INTROSPECTION=ON      \
-  -DENABLE_GTK_DOC=OFF                   \
-  -DENABLE_QT5=OFF                       \
-  -DENABLE_LIBOPENJPEG="openjpeg2"    \
-  -DENABLE_CMS="none"                    \
-  -DENABLE_DCTDECODER="libjpeg"          \
-  -DENABLE_LIBCURL=OFF                   \
-  -DENABLE_ZLIB=ON                       \
-  -DENABLE_ZLIB_UNCOMPRESS=OFF           \
-  -DUSE_FLOAT=OFF                        \
-  -DBUILD_SHARED_LIBS=OFF                \
-  -DRUN_GPERF_IF_PRESENT=OFF             \
-  -DEXTRA_WARN=OFF                       \
-  -DWITH_JPEG=ON                         \
-  -DWITH_PNG=ON                          \
-  -DWITH_TIFF=OFF                        \
-  -DWITH_NSS3=OFF                        \
-  -DWITH_Cairo=ON                        \
-  ..
-
-cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (poppler)"
 cd $BASE
 
-log_note "*** Build fontforge $FONTFORGE_VERSION ***"
-# get fontforge
-if [ ! -f $FONTFORGE_SRC ]; then
-	log_status "Getting fontforge source $FONTFORGE_SRC .."
-	wget -q https://github.com/fontforge/fontforge/archive/$FONTFORGE_SRC
-else
-	log_status "Found fontforge source $FONTFORGE_SRC .."
+if (( ! $skipfontforge )) ; then
+    log_note "*** Build fontforge $FONTFORGE_VERSION ***"
+    # get fontforge
+    if [ ! -f $FONTFORGE_SRC ]; then
+        log_status "Getting fontforge source $FONTFORGE_SRC .."
+        wget wget https://github.com/fontforge/fontforge/archive/$FONTFORGE_SRC
+    else
+        log_status "Found fontforge source $FONTFORGE_SRC .."
+    fi
+    # unpack fontforge
+    tar xf $FONTFORGE_SRC
+    rm -rf fontforge
+    mv fontforge-$FONTFORGE_VERSION fontforge
+    cd fontforge
+    mkdir build
+    cd build
+
+    cmake -G "Ninja" -Wno-dev          \
+    -DCMAKE_BUILD_TYPE=Release         \
+    -DCMAKE_INSTALL_PREFIX="$TARGET"   \
+    -DBUILD_SHARED_LIBS:BOOL=OFF       \
+    -DENABLE_GUI:BOOL=OFF              \
+    -DENABLE_X11:BOOL=OFF              \
+    -DENABLE_NATIVE_SCRIPTING:BOOL=ON  \
+    -DENABLE_PYTHON_SCRIPTING:BOOL=OFF \
+    -DENABLE_PYTHON_EXTENSION:AUTO=OFF \
+    -DENABLE_LIBSPIRO:BOOL=OFF         \
+    -DENABLE_LIBGIF:AUTO=OFF           \
+    -DENABLE_LIBJPEG:AUTO=ON           \
+    -DENABLE_LIBPNG:AUTO=ON            \
+    -DENABLE_LIBREADLINE:AUTO=OFF      \
+    -DENABLE_LIBTIFF:AUTO=ON           \
+    -DENABLE_WOFF2:AUTO=OFF            \
+    -DENABLE_DOCS:AUTO=OFF             \
+    -DENABLE_CODE_COVERAGE:BOOL=OFF    \
+    -DENABLE_DEBUG_RAW_POINTS:BOOL=OFF \
+    -DENABLE_FONTFORGE_EXTRAS:BOOL=OFF \
+    -DENABLE_MAINTAINER_TOOLS:BOOL=OFF \
+    -DENABLE_TILE_PATH:BOOL=OFF        \
+    -DENABLE_WRITE_PFM:BOOL=ON         \
+    -DENABLE_SANITIZER:ENUM="none"     \
+    -DENABLE_FREETYPE_DEBUGGER:PATH="" \
+    -DSPHINX_USE_VENV:BOOL=OFF         \
+    -DREAL_TYPE:ENUM="double"          \
+    -DTHEME:ENUM="tango"               \
+    ..
+
+    cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (fontforge)"
 fi
 
-# unpack fontforge
-tar xf $FONTFORGE_SRC
-rm -rf fontforge
-mv fontforge-$FONTFORGE_VERSION fontforge
-cd fontforge
-mkdir build
-cd build
-
-cmake -G "Ninja" -Wno-dev                   \
-  -DCMAKE_BUILD_TYPE=Release                \
-  -DCMAKE_INSTALL_PREFIX="$TARGET"          \
-  -DBUILD_SHARED_LIBS:BOOL=OFF              \
-  -DENABLE_GUI:BOOL=OFF                     \
-  -DENABLE_X11:BOOL=OFF                     \
-  -DENABLE_NATIVE_SCRIPTING:BOOL=ON         \
-  -DENABLE_PYTHON_SCRIPTING:BOOL=OFF        \
-  -DENABLE_PYTHON_EXTENSION:AUTO=OFF        \
-  -DENABLE_LIBSPIRO:BOOL=OFF                \
-  -DENABLE_LIBUNINAMESLIST:BOOL=OFF         \
-  -DENABLE_LIBGIF:AUTO=OFF                  \
-  -DENABLE_LIBJPEG:AUTO=ON                  \
-  -DENABLE_LIBPNG:AUTO=ON                   \
-  -DENABLE_LIBREADLINE:AUTO=OFF             \
-  -DENABLE_LIBTIFF:AUTO=OFF                 \
-  -DENABLE_WOFF2:AUTO=OFF                   \
-  -DENABLE_DOCS:AUTO=OFF                    \
-  -DENABLE_CODE_COVERAGE:BOOL=OFF           \
-  -DENABLE_DEBUG_RAW_POINTS:BOOL=OFF        \
-  -DENABLE_FONTFORGE_EXTRAS:BOOL=OFF        \
-  -DENABLE_MAINTAINER_TOOLS:BOOL=OFF        \
-  -DENABLE_TILE_PATH:BOOL=OFF               \
-  -DENABLE_WRITE_PFM:BOOL=OFF               \
-  -DENABLE_SANITIZER:ENUM="none"            \
-  -DENABLE_FREETYPE_DEBUGGER:PATH=""        \
-  -DSPHINX_USE_VENV:BOOL=OFF                \
-  -DREAL_TYPE:ENUM="double"                 \
-  -DTHEME:ENUM="tango"                      \
-  ..
-
-cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (fontforge)"
 cd $BASE
 
 log_note  "*** Build pdf2htmlEX.exe ***"
@@ -336,7 +337,7 @@ cmake -G "Ninja" -Wno-dev          \
   -DCMAKE_BUILD_TYPE=Release       \
   -DCMAKE_INSTALL_PREFIX="$TARGET" \
   ..
-  
+
 cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (pdf2htmlEX)"
 cd $BASE
 
@@ -356,10 +357,9 @@ rm -rf "$RELEASE/share/fontforge/prefs"
 rm -Rf "$RELEASE/share/man"
 rm -Rf "$RELEASE/bin/data/pkgconfig"
 
-#copy libs
 cd $WORK
 
-# fontforge
+# copy libs fontforge
 ffex=`which fontforge.exe`
 MSYSROOT=`cygpath -w /`
 FFEXROOT=`cygpath -w $(dirname "${ffex}")`
@@ -375,10 +375,10 @@ fflibs=`ntldd -D "$(dirname \"${ffex}\")" -R "$ffex" \
 for f in $fflibs; do
     filename="$(basename $f)"
     filenoext="${filename%.*}"
-    strip "$f" -so "$RELEASE/bin/$filename"
+    strip "$f" -svo "$RELEASE/bin/$filename"
 done
 
-# gettext
+# copy libs gettext
 msgmex=`which msgmerge.exe`
 MSGMROOT=`cygpath -w $(dirname "${msgmex}")`
 msmglibs=`ntldd -D "$(dirname \"${msgmex}\")" -R "$msgmex" \
@@ -393,28 +393,10 @@ msmglibs=`ntldd -D "$(dirname \"${msgmex}\")" -R "$msgmex" \
 for f in $msmglibs; do
     filename="$(basename $f)"
     filenoext="${filename%.*}"
-    strip "$f" -so "$RELEASE/bin/$filename"
+    strip "$f" -svo "$RELEASE/bin/$filename"
 done
 
-# potrace (fontforge)
-potrace=`which potrace.exe`
-POTRACERROOT=`cygpath -w $(dirname "${potrace}")`
-potracelibs=`ntldd -D "$(dirname \"${potrace}\")" -R "$potrace" \
-| grep =.*dll \
-| sed -e '/^[^\t]/ d'  \
-| sed -e 's/\t//'  \
-| sed -e 's/.*=..//'  \
-| sed -e 's/ (0.*)//' \
-| grep -F -e "$MSYSROOT" -e "$POTRACERROOT" \
-`
-
-for f in $potracelibs; do
-    filename="$(basename $f)"
-    filenoext="${filename%.*}"
-    strip "$f" -so "$RELEASE/bin/$filename"
-done
-
-# pdf2htmlEX
+# copy libs pdf2htmlEX
 pdf2htmlEXex=`which pdf2htmlEX.exe`
 PDFHTMLEXROOT=`cygpath -w $(dirname "${pdf2htmlEXex}")`
 strip "$pdf2htmlEXex" -so "$RELEASE/bin/pdf2htmlEX.exe"
@@ -430,7 +412,7 @@ pdf2htmlexlibs=`ntldd -D "$(dirname \"${pdf2htmlEXex}\")" -R "$pdf2htmlEXex" \
 for f in $pdf2htmlexlibs; do
     filename="$(basename $f)"
     filenoext="${filename%.*}"
-    strip "$f" -so "$RELEASE/bin/$filename"
+    strip "$f" -svo "$RELEASE/bin/$filename"
 done
 
 log_note "*** Finish!!! ***"
