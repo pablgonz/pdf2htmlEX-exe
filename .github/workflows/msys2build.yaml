@@ -12,4 +12,4 @@ jobs:
       - name: MSYS2
       - uses: msys2/setup-msys2@v2
         run: |
-      uname -a
+        uname -a
