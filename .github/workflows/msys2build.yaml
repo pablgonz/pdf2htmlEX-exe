@@ -11,5 +11,8 @@ jobs:
         shell: msys2 {0}
     steps:
     - uses: actions/checkout@v2
+    - name: Java location command-line
+      shell: pwsh
+      run:  Get-Command java
     - uses: msys2/setup-msys2@v2
     - run: whereis java.exe
