@@ -11,5 +11,5 @@ jobs:
     - name: Java location command-line
       shell: pwsh
       run:  Get-Command java  | select Source
-#    - uses: msys2/setup-msys2@v2
-#    - run: whereis java.exe
+    - uses: msys2/setup-msys2@v2
+    - run: powershell -Command "Get-Command java  | select Source" | grep java
