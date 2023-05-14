@@ -10,6 +10,6 @@ jobs:
     - uses: actions/checkout@v2
     - name: Java location command-line
       shell: pwsh
-      run:  Get-Command java  | select Source
+      run:  Get-Command java  | select Source > javalocation.txt
     - uses: msys2/setup-msys2@v2
-    - run: powershell -Command "Get-Command java  | select Source" | sed 's/java.exe//' | sed 's/C\:/\/c/' | sed 's:\\:\/:g'
+    - run: ./mypdf2htmlbuild.sh

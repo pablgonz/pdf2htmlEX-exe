@@ -3,7 +3,7 @@
 # Use in MSYS2/MinGW-w64 for build pdf2htmlEX
 # Author: Pablo González L
 # Debemos intentar capturar java desde msys2
-# cmd //c 'REG QUERY HKCU\Environment -v PATH'| grep '^    PATH'| sed 's/    PATH    REG_EXPAND_SZ    //' | sed 's/;/\n/g' | grep 'java'
+# JAVA=`powershell -Command "Get-Command java  | select Source" | sed 's/java.exe//' | sed 's/C\:/\/c/' | sed 's@\\\\@/@g'`
 # Green text
 function log_note() {
     echo -ne "\e[32m"; echo "$@"; echo -ne "\e[0m"
@@ -141,9 +141,21 @@ else
 fi
 
 # Set working folders and vars
-export PATH=$PATH:"/c/java/jdk-20.0.1/bin"
+if [ ! -f "$BASE/javalocation.txt" ]; then
+    log_status "The script will continue without detecting java, run:"
+    log_status "powershell -c \"Get-Command java  | select Source\" > javalocation.txt"
+else
+    log_status "The script set java from file"
+    JAVA=` cat java.txt | grep java.exe | sed 's/java.exe//' \
+    | sed 's/Source//' | sed 's/------//' | sed 's/C\:/\/c/' \
+    | sed 's@\\\\@\/@g'
+    `
+    export PATH=$PATH:"$JAVA"
+    echo "$JAVA"
+fi
+
 export PDF2HTMLEX_VERSION=0.18.8.rc1-"($ARCHNUM-bit)"
-# current found poppler-21.02.0 (no patch)
+# current work poppler-21.02.0 (need patch)
 export POPPLER_VERSION=poppler-21.02.0
 export POPPLER_DATA=poppler-data-0.4.12
 export FONTFORGE_VERSION=20230101
@@ -232,8 +244,8 @@ if (( ! $skippoppler )) ; then
     rm -rf poppler-data
     mv $POPPLER_DATA poppler-data
 
-    #log_status "Patch poppler-private.h for $POPPLER_VERSION .."
-    #patch -b "poppler/glib/poppler-private.h" "patches/poppler-private-21.02.0.patch"
+    log_status "Patch poppler-private.h for $POPPLER_VERSION .."
+    patch -b "poppler/glib/poppler-private.h" "patches/poppler-private-21.02.0.patch"
 
     cd poppler
     mkdir build
