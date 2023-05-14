@@ -9,6 +9,13 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-      - name: MSYS2
-        uses: msys2/setup-msys2@v2
-        run: uname -a
+    - uses: msys2/setup-msys2@v2
+    with:
+      msystem: MSYS
+    - shell: msys2 {0}
+      run: |
+        makepkg-mingw -sCLfc --noconfirm --noprogressbar
+        pacman --noconfirm -U mingw-w64-*-any.pkg.tar.xz
+    - run: |
+        set MSYSTEM=UCRT64
+        msys2 -c '<command to test the package>'
