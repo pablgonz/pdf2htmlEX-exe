@@ -146,7 +146,7 @@ if [ ! -f "$BASE/javalocation.txt" ]; then
     log_status "powershell -c \"Get-Command java  | select Source\" > javalocation.txt"
 else
     log_status "The script set java from file"
-    JAVA=` cat java.txt | grep java.exe | sed 's/java.exe//' \
+    JAVA=` cat javalocation.txt | grep java.exe | sed 's/java.exe//' \
     | sed 's/Source//' | sed 's/------//' | sed 's/C\:/\/c/' \
     | sed 's@\\\\@\/@g'
     `
@@ -243,10 +243,9 @@ if (( ! $skippoppler )) ; then
     tar xf $POPPLER_DATA.tar.gz
     rm -rf poppler-data
     mv $POPPLER_DATA poppler-data
-
-    log_status "Patch poppler-private.h for $POPPLER_VERSION .."
-    patch -b "poppler/glib/poppler-private.h" "patches/poppler-private-21.02.0.patch"
-
+    ## patch poppler
+    #log_status "Patch poppler-private.h for $POPPLER_VERSION .."
+    #patch -b "poppler/glib/poppler-private.h" "patches/poppler-private-21.02.0.patch"
     cd poppler
     mkdir build
     cd build
@@ -429,4 +428,4 @@ done
 
 log_note "*** Finish!!! ***"
 
-exit 1
+exit 0

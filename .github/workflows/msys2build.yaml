@@ -7,10 +7,11 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Java location command-line
+    - uses: actions/checkout@v3
+    - name: Set java location in file
       shell: pwsh
       run:  Get-Command java  | select Source > javalocation.txt
+    - name: Build pdf2htmlEX for windows
     - uses: msys2/setup-msys2@v2
     - shell: msys2 {0}
       run:  sh mypdf2htmlbuild.sh
