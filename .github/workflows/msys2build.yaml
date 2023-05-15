@@ -60,5 +60,4 @@ jobs:
         run: sh mypdf2htmlbuild.sh --ghactions
       - shell: cmd
         run: |
-          cd  ReleasePackage\bin &&
-          pdf2htmlEX.exe --version
+          ReleasePackage\bin\pdf2htmlEX.exe --version

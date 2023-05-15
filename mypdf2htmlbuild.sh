@@ -425,5 +425,5 @@ for f in $pdf2htmlexlibs; do
 done
 
 log_note "*** Finish!!! ***"
-
+cd $BASE
 exit 0
