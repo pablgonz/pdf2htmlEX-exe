@@ -10,7 +10,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sys: [ MINGW64, MINGW32]
+        sys:
+          - mingw64
+          - mingw32
 
     steps:
       - name: Checkout
@@ -22,9 +24,5 @@ jobs:
 
       - uses: msys2/setup-msys2@v2
         with:
-        msystem: ${{matrix.sys}}
-        install: >-
-          git
-          base-devel
-        pacboy: >-
-          openssl:p
+          msystem: ${{matrix.sys}}
+          pacboy: openssl:p
