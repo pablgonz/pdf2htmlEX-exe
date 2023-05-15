@@ -29,12 +29,14 @@ skippoppler=0
 skipfontforge=0
 onlypdf2htmlEX=0
 depsonly=0
+ghactions=0
 
 function dohelp() {
     echo "Usage: `basename $0` [options]"
     echo "  -h, --help             Prints this help message"
     echo "  -y, --yes              Say yes to all build script prompts"
     echo "  -d, --depsonly         Only install dependencies for MSYS2"
+    echo "  -G, --ghactions        Disable install local dependencies"
     echo "  -P, --skip-poppler     Skip build/install poppler"
     echo "  -F, --skip-fontforge   Skip build/install fontforge"
     echo "  -E, --only-pdf2htmlEX  Only build/install pdf2htmlEX.exe"
@@ -42,7 +44,7 @@ function dohelp() {
 }
 
 # Retrieve input arguments to script
-optspec=":hydPFE-:"
+optspec=":hydGPFE-:"
 while getopts "$optspec" optchar; do
     case "${optchar}" in
         -)
@@ -55,6 +57,8 @@ while getopts "$optspec" optchar; do
                     onlypdf2htmlEX=$((1-onlypdf2htmlEX)) ;;
                 depsonly)
                     depsonly=$((1-depsonly)) ;;
+                ghactions)
+                    ghactions=$((1-ghactions)) ;;
                 yes)
                     yes=$((1-yes)) ;;
                 help)
@@ -71,6 +75,8 @@ while getopts "$optspec" optchar; do
             onlypdf2htmlEX=$((1-onlypdf2htmlEX)) ;;
         d)
             depsonly=$((1-depsonly)) ;;
+        G)
+            ghactions=$((1-ghactions)) ;;
         y)
             yes=$((1-yes)) ;;
         h)
@@ -193,7 +199,7 @@ export CPPFLAGS="${CFLAGS}"
 export LIBS=""
 
 # Install all the available precompiled binaries
-if (( ! $depsonly )) && [ ! -f $PMTEST ]; then
+if (( ! $ghactions )) || [ ! -f $PMTEST ]; then
     log_status "First time run; installing MSYS and MinGW libraries..."
     pacman -Sy --noconfirm
     IOPTS="-S --noconfirm --needed"
