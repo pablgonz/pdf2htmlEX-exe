@@ -110,7 +110,7 @@ function detect_arch_switch () {
     touch $to
 }
 
-# tree for build/release
+# Tree for build/release
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 RELEASE=$BASE/ReleasePackage/
 
@@ -133,15 +133,6 @@ elif [ "$MSYSTEM" = "MINGW64" ]; then
     HOST="--build=x86_64-w64-mingw32 --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32"
     PMARCH=x86_64
     PMPREFIX="mingw-w64-$PMARCH"
-elif [ "$MSYSTEM" = "UCRT64" ]; then
-    log_note "Building 64-bit ucrt version!"
-
-    ARCHNUM="64"
-    MINGVER=ucrt64
-    MINGOTHER=mingw32
-    HOST="--build=x86_64-w64-mingw32 --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32"
-    PMARCH=ucrt-x86_64
-    PMPREFIX="mingw-w64-$PMARCH"
 else
     bail "Unknown build system!"
 fi
@@ -161,7 +152,7 @@ else
 fi
 
 export PDF2HTMLEX_VERSION=0.18.8.rc1-"($ARCHNUM-bit)"
-# current work poppler-21.02.0 (need patch)
+# current work poppler-21.02.0 (need patch on windows)
 export POPPLER_VERSION=poppler-21.02.0
 export POPPLER_DATA=poppler-data-0.4.12
 export FONTFORGE_VERSION=20230101
@@ -222,7 +213,7 @@ else
     log_note "Detected that precompiled libraries are already installed."
     log_note "  Delete '$PMTEST' and run this script again if"
     log_note "  this is not the case."
-fi # pacman installed
+fi # pacman installed pkg done
 
 # buid poppler
 if (( ! $skippoppler )) ; then
