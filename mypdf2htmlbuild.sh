@@ -190,30 +190,34 @@ export CPPFLAGS="${CFLAGS}"
 export LIBS=""
 
 # Install all the available precompiled binaries
-if (( ! ($ghactions+$depsonly) )) || [ ! -f $PMTEST ]; then
-    log_status "First time run; installing MSYS and MinGW libraries..."
-    pacman -Sy --noconfirm
-    IOPTS="-S --noconfirm --needed"
-
-    # Install MinGW related stuff
-    pacman $IOPTS $PMPREFIX-{gcc,gmp,ntldd-git,gettext,libiconv,cmake,ninja,ccache,cc,gobject-introspection}
-
-    # Install the base MSYS packages needed
-    pacman $IOPTS diffutils findutils make patch tar pkgconf git
-
-    # Libraries
-    log_status "Installing precompiled devel libraries..."
-    pacman $IOPTS $PMPREFIX-{libspiro,libuninameslist,lcms2,libtiff,cairo}
-    pacman $IOPTS $PMPREFIX-{zlib,libpng,giflib,libjpeg-turbo,libxml2,openjpeg2}
-    pacman $IOPTS $PMPREFIX-{freetype,fontconfig,glib2,pixman,harfbuzz}
-    touch $PMTEST
-
-    log_note "Finished installing precompiled libraries!"
+if (( $ghactions )); then
+    log_status "Installing MSYS and MinGW libraries done by ghactions"
 else
-    log_note "Detected that precompiled libraries are already installed."
-    log_note "  Delete '$PMTEST' and run this script again if"
-    log_note "  this is not the case."
-fi # pacman installed pkg done
+    if (( !$depsonly )) && [ ! -f $PMTEST ]; then
+        log_status "First time run; installing MSYS and MinGW libraries..."
+        pacman -Sy --noconfirm
+        IOPTS="-S --noconfirm --needed"
+
+        # Install MinGW related stuff
+        pacman $IOPTS $PMPREFIX-{gcc,gmp,ntldd-git,gettext,libiconv,cmake,ninja,ccache,cc,gobject-introspection}
+
+        # Install the base MSYS packages needed
+        pacman $IOPTS diffutils findutils make patch tar pkgconf git
+
+        # Libraries
+        log_status "Installing precompiled devel libraries..."
+        pacman $IOPTS $PMPREFIX-{libspiro,libuninameslist,lcms2,libtiff,cairo}
+        pacman $IOPTS $PMPREFIX-{zlib,libpng,giflib,libjpeg-turbo,libxml2,openjpeg2}
+        pacman $IOPTS $PMPREFIX-{freetype,fontconfig,glib2,pixman,harfbuzz}
+        touch $PMTEST
+
+        log_note "Finished installing precompiled libraries!"
+    else
+        log_note "Detected that precompiled libraries are already installed."
+        log_note "  Delete '$PMTEST' and run this script again if"
+        log_note "  this is not the case."
+    fi
+fi
 
 # buid poppler
 if (( ! $skippoppler )) ; then
