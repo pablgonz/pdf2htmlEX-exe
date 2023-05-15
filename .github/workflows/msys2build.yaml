@@ -4,14 +4,27 @@ name: Build pdf2htmlEX for Windows
 on: [push]
 
 jobs:
-  build:
+  check:
     runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        sys: [ MINGW64, MINGW32]
     steps:
-    - uses: actions/checkout@v3
-    - name: Set java location in file
-      shell: pwsh
-      run:  Get-Command java  | select Source > javalocation.txt
-    - uses: msys2/setup-msys2@v2
-    - shell: msys2 {0}
-      name: Set java location in file
-      run:  sh mypdf2htmlbuild.sh
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set java location in file
+        shell: pwsh
+        run:  Get-Command java  | select Source > javalocation.txt
+
+      - name: Build pdf2htmlEX en MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+        msystem: ${{matrix.sys}}
+          install: >-
+            git
+            base-devel
+          pacboy: >-
+            openssl:p
