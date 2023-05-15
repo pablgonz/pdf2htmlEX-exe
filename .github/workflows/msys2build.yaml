@@ -4,7 +4,6 @@ name: Build pdf2htmlEX for Windows
 on: [push]
 
 jobs:
-  check:
     runs-on: windows-latest
 
     strategy:
