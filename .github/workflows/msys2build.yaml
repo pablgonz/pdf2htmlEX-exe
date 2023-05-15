@@ -27,7 +27,7 @@ jobs:
         with:
           msystem: ${{matrix.sys}}
           install: >-
-            diffutils findutils make patch tar pkgconf git
+            diffutils findutils make patch tar pkgconf git wget
           pacboy: >-
             gcc:p
             gmp:p
