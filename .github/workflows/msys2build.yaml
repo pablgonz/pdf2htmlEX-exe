@@ -54,3 +54,4 @@ jobs:
             glib2:p
             pixman:p
             harfbuzz:p
+          run: sh mypdf2htmlbuild.sh
