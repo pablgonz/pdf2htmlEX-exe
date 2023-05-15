@@ -26,6 +26,7 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: ${{matrix.sys}}
+          update: true
           install: >-
             diffutils findutils make patch tar pkgconf git wget
           pacboy: >-
@@ -57,3 +58,7 @@ jobs:
             harfbuzz:p
       - shell: msys2 {0}
         run: sh mypdf2htmlbuild.sh --ghactions
+      - shell: cmd
+        run: |
+          cd  ReleasePackage\bin &&
+          pdf2htmlEX.exe --version
