@@ -1,7 +1,9 @@
 imageBuild
 poppler-data
-building-mingw64
-pacman-mingw64-installed
+.building-mingw32
+.building-mingw64
+.pacman-mingw32-installed
+.pacman-mingw64-installed
 javalocation.txt
 ReleasePackage/bin/*
 ReleasePackage/lib/
