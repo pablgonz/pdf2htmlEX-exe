@@ -232,6 +232,9 @@ if (( ! $skippoppler )) ; then
     tar xf $POPPLER_VERSION.tar.xz
     rm -rf poppler
     mv $POPPLER_VERSION poppler
+    # patch poppler
+    log_status "Patch poppler-private.h for $POPPLER_VERSION .."
+    patch -b "poppler/glib/poppler-private.h" "patches/poppler-private-21.02.0.patch"
     # get poppler-data .tar.gz
     if [ ! -f $POPPLER_DATA.tar.gz ]; then
         log_status "Getting $POPPLER_DATA.tar.gz .."
@@ -243,9 +246,7 @@ if (( ! $skippoppler )) ; then
     tar xf $POPPLER_DATA.tar.gz
     rm -rf poppler-data
     mv $POPPLER_DATA poppler-data
-    ## patch poppler
-    #log_status "Patch poppler-private.h for $POPPLER_VERSION .."
-    #patch -b "poppler/glib/poppler-private.h" "patches/poppler-private-21.02.0.patch"
+    # build poopler
     cd poppler
     mkdir build
     cd build
