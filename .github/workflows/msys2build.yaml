@@ -27,4 +27,14 @@ jobs:
           msystem: ${{matrix.sys}}
           install: >-
             diffutils findutils make patch tar pkgconf git
-          pacboy: openssl:m
+          pacboy: >-
+            gcc:p
+            gmp:p
+            ntldd-git:p
+            gettext:p
+            libiconv:p
+            cmake:p
+            ninja:p
+            ccache:p
+            cc:p
+            gobject-introspection:p
