@@ -18,11 +18,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set java location in file
+      - name: Set java location in file javalocation.txt
         shell: pwsh
         run:  Get-Command java  | select Source > javalocation.txt
 
       - uses: msys2/setup-msys2@v2
         with:
-          msystem: ${{matrix.sys}}
-          pacboy: openssl:p
+          msystem: ${{matrix.sys
+          install: >-
+            diffutils findutils make patch tar pkgconf git
+          pacboy: openssl:m
