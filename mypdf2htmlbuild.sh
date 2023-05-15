@@ -2,8 +2,7 @@
 # pdf2htmlEX build script.
 # Use in MSYS2/MinGW-w64 for build pdf2htmlEX
 # Author: Pablo González L
-# Debemos intentar capturar java desde msys2
-# JAVA=`powershell -Command "Get-Command java  | select Source" | sed 's/java.exe//' | sed 's/C\:/\/c/' | sed 's@\\\\@/@g'`
+
 # Green text
 function log_note() {
     echo -ne "\e[32m"; echo "$@"; echo -ne "\e[0m"
@@ -234,7 +233,7 @@ if (( ! $skippoppler )) ; then
     rm -rf poppler
     mv $POPPLER_VERSION poppler
     # patch poppler
-    log_status "Patch poppler-private.h for $POPPLER_VERSION .."
+    log_status "Patch glib/poppler-private.h for $POPPLER_VERSION .."
     patch -b "poppler/glib/poppler-private.h" "patches/poppler-private-21.02.0.patch"
     # get poppler-data .tar.gz
     if [ ! -f $POPPLER_DATA.tar.gz ]; then
@@ -449,14 +448,17 @@ done
 
 cd $BASE
 
-log_note "Compress generated lib and executable files using upx ..."
-cd "$RELEASE/bin"
+# Only 64-bit support upx commpress
+if [ "$MSYSTEM" = "MINGW64" ] ; then
+    log_note "Compress generated lib and executable files using upx ..."
+    cd "$RELEASE/bin"
+    for f in *.{dll,exe}; do
+        upx -qq --best --ultra-brute "$f"
+    done
+    cd $BASE
+fi
 
-for f in *.{dll,exe}; do
-    upx --best "$f"
-done
-
-cd $BASE
+# Finish
 log_note "*** Finish!!! ***"
 
 exit 0
