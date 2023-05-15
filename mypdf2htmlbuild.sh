@@ -206,7 +206,7 @@ else
 
         # Libraries
         log_status "Installing precompiled devel libraries..."
-        pacman $IOPTS $PMPREFIX-{libspiro,libuninameslist,lcms2,libtiff,cairo}
+        pacman $IOPTS $PMPREFIX-{libspiro,libuninameslist,lcms2,libtiff,cairo,ttfautohint}
         pacman $IOPTS $PMPREFIX-{zlib,libpng,giflib,libjpeg-turbo,libxml2,openjpeg2}
         pacman $IOPTS $PMPREFIX-{freetype,fontconfig,glib2,pixman,harfbuzz}
         touch $PMTEST
@@ -362,12 +362,12 @@ cd $BASE
 
 # copy folders
 log_status "Copying folders and libs need by pdf2htmlEX.exe "
-cp -rf $TARGET/share/fontforge "$RELEASE/share/"
-cp -rf $TARGET/share/locale "$RELEASE/share/"
-cp -rf $TARGET/share/man "$RELEASE/share/"
+#cp -rf $TARGET/share/fontforge "$RELEASE/share/"
+#cp -rf $TARGET/share/locale "$RELEASE/share/"
+#cp -rf $TARGET/share/man "$RELEASE/share/"
 cp -Rf $TARGET/share/pdf2htmlEX "$RELEASE/bin/data"
-rm -rf "$RELEASE/share/fontforge/prefs"
-rm -Rf "$RELEASE/share/man"
+#rm -rf "$RELEASE/share/fontforge/prefs"
+#rm -Rf "$RELEASE/share/man"
 rm -Rf "$RELEASE/bin/data/pkgconfig"
 
 cd $WORK
@@ -428,6 +428,35 @@ for f in $pdf2htmlexlibs; do
     strip "$f" -svo "$RELEASE/bin/$filename"
 done
 
-log_note "*** Finish!!! ***"
+# copy libs ttfautohint
+ttfautohintex=`which ttfautohint.exe`
+TTFAUTOROOT=`cygpath -w $(dirname "${ttfautohintex}")`
+strip "$ttfautohintex" -so "$RELEASE/bin/ttfautohint.exe"
+ttfautohintlibs=`ntldd -D "$(dirname \"${ttfautohintex}\")" -R "$ttfautohintex" \
+| grep =.*dll \
+| sed -e '/^[^\t]/ d'  \
+| sed -e 's/\t//'  \
+| sed -e 's/.*=..//'  \
+| sed -e 's/ (0.*)//' \
+| grep -F -e "$MSYSROOT" -e "$TTFAUTOROOT" \
+`
+
+for f in $ttfautohintlibs; do
+    filename="$(basename $f)"
+    filenoext="${filename%.*}"
+    strip "$f" -svo "$RELEASE/bin/$filename"
+done
+
 cd $BASE
+
+log_note "Compress generated lib and executable files using upx ..."
+cd "$RELEASE/bin"
+
+for f in *.{dll,exe}; do
+    upx --best "$f"
+done
+
+cd $BASE
+log_note "*** Finish!!! ***"
+
 exit 0
