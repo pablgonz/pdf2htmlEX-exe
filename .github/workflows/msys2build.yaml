@@ -24,6 +24,7 @@ jobs:
 
       - name: Build pdf2htmlEX on msys2
         uses: msys2/setup-msys2@v2
+        shell: msys2 {0}
         with:
           msystem: ${{matrix.sys}}
           install: >-
@@ -55,4 +56,4 @@ jobs:
             glib2:p
             pixman:p
             harfbuzz:p
-      - run: sh mypdf2htmlbuild.sh
+      - run: sh mypdf2htmlbuild.sh --ghactions

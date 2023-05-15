@@ -199,7 +199,7 @@ export CPPFLAGS="${CFLAGS}"
 export LIBS=""
 
 # Install all the available precompiled binaries
-if (( ! $ghactions )) || [ ! -f $PMTEST ]; then
+if (( ! ($ghactions+$depsonly) )) || [ ! -f $PMTEST ]; then
     log_status "First time run; installing MSYS and MinGW libraries..."
     pacman -Sy --noconfirm
     IOPTS="-S --noconfirm --needed"
