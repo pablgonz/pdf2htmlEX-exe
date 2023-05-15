@@ -22,7 +22,8 @@ jobs:
         shell: pwsh
         run:  Get-Command java  | select Source > javalocation.txt
 
-      - uses: msys2/setup-msys2@v2
+      - name: Build pdf2htmlEX on msys2
+        uses: msys2/setup-msys2@v2
         with:
           msystem: ${{matrix.sys}}
           install: >-
@@ -54,4 +55,4 @@ jobs:
             glib2:p
             pixman:p
             harfbuzz:p
-          run: sh mypdf2htmlbuild.sh
+        run: sh mypdf2htmlbuild.sh
