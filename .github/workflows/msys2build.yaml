@@ -6,7 +6,6 @@ on: [push]
 jobs:
   build:
     runs-on: windows-latest
-    strategy:
 
     strategy:
       fail-fast: false
