@@ -284,7 +284,7 @@ if (( ! $skippoppler )) ; then
 
     cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (poppler)"
 fi
-
+exit 1
 cd $BASE
 
 if (( ! $skipfontforge )) ; then
