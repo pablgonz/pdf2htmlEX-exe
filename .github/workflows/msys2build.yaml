@@ -38,3 +38,19 @@ jobs:
             ccache:p
             cc:p
             gobject-introspection:p
+            libspiro:p
+            libuninameslist:p
+            lcms2:p
+            libtiff:p
+            cairo:p
+            zlib:p
+            libpng:p
+            giflib:p
+            libjpeg-turbo:p
+            libxml2:p
+            openjpeg2:p
+            freetype:p
+            fontconfig:p
+            glib2:p
+            pixman:p
+            harfbuzz:p
