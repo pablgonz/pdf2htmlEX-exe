@@ -19,12 +19,11 @@ jobs:
         shell: pwsh
         run:  Get-Command java  | select Source > javalocation.txt
 
-      - name: Build pdf2htmlEX en MSYS2
-        uses: msys2/setup-msys2@v2
+      - uses: msys2/setup-msys2@v2
         with:
         msystem: ${{matrix.sys}}
-          install: >-
-            git
-            base-devel
-          pacboy: >-
-            openssl:p
+        install: >-
+          git
+          base-devel
+        pacboy: >-
+          openssl:p
