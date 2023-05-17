@@ -24,36 +24,32 @@ function log_error() {
 
 # vars for terminal
 yes=0
-skippoppler=0
-skipfontforge=0
-onlypdf2htmlEX=0
+nopoppler=0
+nofontforge=0
 depsonly=0
 ghactions=0
 
 function dohelp() {
     echo "Usage: `basename $0` [options]"
-    echo "  -h, --help             Prints this help message"
-    echo "  -y, --yes              Say yes to all build script prompts"
-    echo "  -d, --depsonly         Only install dependencies for MSYS2"
-    echo "  -G, --ghactions        Disable install local dependencies"
-    echo "  -P, --skip-poppler     Skip build/install poppler"
-    echo "  -F, --skip-fontforge   Skip build/install fontforge"
-    echo "  -E, --only-pdf2htmlEX  Only build/install pdf2htmlEX.exe"
+    echo "  -h, --help                Prints this help message"
+    echo "  -y, --yes                 Say yes to all build script prompts"
+    echo "  -d, --depsonly            Only install dependencies for MSYS2"
+    echo "  -g, --ghactions           Disable install local dependencies"
+    echo "  -P, --no-poppler          Skip build/install poppler"
+    echo "  -F, --no-fontforge        Skip build/install fontforge"
     exit $1
 }
 
 # Retrieve input arguments to script
-optspec=":hydGPFE-:"
+optspec=":hydgpfPF-:"
 while getopts "$optspec" optchar; do
     case "${optchar}" in
         -)
             case "${OPTARG}" in
-                skip-poppler)
-                    skippoppler=$((1-skippoppler)) ;;
-                skip-fontforge)
-                    skipfontforge=$((1-skipfontforge)) ;;
-                only-pdf2htmlEX)
-                    onlypdf2htmlEX=$((1-onlypdf2htmlEX)) ;;
+                no-poppler)
+                    nopoppler=$((1-nopoppler)) ;;
+                no-fontforge)
+                    nofontforge=$((1-nofontforge)) ;;
                 depsonly)
                     depsonly=$((1-depsonly)) ;;
                 ghactions)
@@ -67,14 +63,12 @@ while getopts "$optspec" optchar; do
                     dohelp 1 ;;
             esac;;
         P)
-            skippoppler=$((1-skippoppler)) ;;
+            nopoppler=$((1-nopoppler)) ;;
         F)
-            skipfontforge=$((1-skipfontforge)) ;;
-        E)
-            onlypdf2htmlEX=$((1-onlypdf2htmlEX)) ;;
+            nofontforge=$((1-nofontforge)) ;;
         d)
             depsonly=$((1-depsonly)) ;;
-        G)
+        g)
             ghactions=$((1-ghactions)) ;;
         y)
             yes=$((1-yes)) ;;
@@ -85,6 +79,10 @@ while getopts "$optspec" optchar; do
             dohelp 1 ;;
     esac
 done
+
+# Tree for build/release (mmm use /tmp => pdf2htmlEX-win-64/ for release)
+BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+RELEASE=$BASE/ReleasePackage/
 
 # detect arch
 function detect_arch_switch () {
@@ -109,10 +107,6 @@ function detect_arch_switch () {
     touch $to
 }
 
-# Tree for build/release
-BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-RELEASE=$BASE/ReleasePackage/
-
 # Determine if we're building 32 or 64 bit.
 if [ "$MSYSTEM" = "MINGW32" ]; then
     log_note "Building 32-bit version!"
@@ -136,10 +130,21 @@ else
     bail "Unknown build system!"
 fi
 
-# Set working folders and vars
+# Early detection
+detect_arch_switch $MINGVER
+
+# Globlal vars
+export PDF2HTMLEX_VERSION=0.18.8.rc1-"($ARCHNUM-bit)"
+export POPPLER_VERSION=poppler-21.02.0
+export POPPLER_DATA=poppler-data-0.4.12
+export FONTFORGE_VERSION=20230101
+FONTFORGE_SRC=$FONTFORGE_VERSION.tar.gz
+
+# Set JAVA for msys2
 if [ ! -f "$BASE/javalocation.txt" ]; then
     log_status "The script will continue without detecting java, run:"
     log_status "powershell -c \"Get-Command java  | select Source\" > javalocation.txt"
+    log_status "or set java in .profile"
 else
     log_status "The script set java from file"
     JAVA=` cat javalocation.txt | grep java.exe | sed 's/java.exe//' \
@@ -150,19 +155,11 @@ else
     echo "$JAVA"
 fi
 
-export PDF2HTMLEX_VERSION=0.18.8.rc1-"($ARCHNUM-bit)"
-# current work poppler-21.02.0 (need patch on windows)
-export POPPLER_VERSION=poppler-21.02.0
-export POPPLER_DATA=poppler-data-0.4.12
-export FONTFORGE_VERSION=20230101
-FONTFORGE_SRC=$FONTFORGE_VERSION.tar.gz
-
-# Early detection
-detect_arch_switch $MINGVER
-
 # Common options
 TARGET=$BASE/target/$MINGVER/
 WORK=$BASE/work/$MINGVER/
+
+# Test for MINGW version
 PMTEST="$BASE/.pacman-$MINGVER-installed"
 
 # Make output directories
@@ -170,8 +167,6 @@ rm -R -f "$WORK"
 mkdir -p "$WORK"
 rm -R -f "$RELEASE/bin"
 mkdir -p "$RELEASE/bin"
-rm -R -f "$RELEASE/share"
-mkdir -p "$RELEASE/share"
 
 # Set pkg-config path to also search mingw libs
 export PATH="$TARGET/bin:$PATH"
@@ -218,8 +213,8 @@ else
     fi
 fi
 
-# buid poppler
-if (( ! $skippoppler )) ; then
+# Buid poppler
+if (( ! $nopoppler )) ; then
     log_note "*** Build poopler $POPPLER_VERSION ***"
 
     if [ ! -f "$BASE/$POPPLER_VERSION.tar.xz" ]; then
@@ -232,7 +227,7 @@ if (( ! $skippoppler )) ; then
     tar xf $POPPLER_VERSION.tar.xz
     rm -rf poppler
     mv $POPPLER_VERSION poppler
-    # patch poppler
+    # patch poppler (need test here for version number)
     log_status "Patch glib/poppler-private.h for $POPPLER_VERSION .."
     patch -b "poppler/glib/poppler-private.h" "patches/poppler-private-21.02.0.patch"
     # get poppler-data .tar.gz
@@ -242,45 +237,46 @@ if (( ! $skippoppler )) ; then
     else
         log_status "Found $POPPLER_DATA.tar.gz .."
     fi
+
     # unpack poppler-data
     tar xf $POPPLER_DATA.tar.gz
     rm -rf poppler-data
     mv $POPPLER_DATA poppler-data
+
     # build poopler
     cd poppler
     mkdir build
     cd build
-
-    cmake -G "Ninja" -Wno-dev            \
-    -DCMAKE_BUILD_TYPE=Release           \
-    -DCMAKE_INSTALL_PREFIX="$TARGET"     \
-    -DENABLE_UNSTABLE_API_ABI_HEADERS=ON \
-    -DBUILD_GTK_TESTS=OFF                \
-    -DBUILD_QT5_TESTS=OFF                \
-    -DBUILD_GTK_TESTS=OFF                \
-    -DENABLE_QT5=OFF                     \
-    -DBUILD_CPP_TESTS=OFF                \
-    -DENABLE_SPLASH=ON                   \
-    -DENABLE_UTILS=OFF                   \
-    -DENABLE_CPP=ON                      \
-    -DENABLE_GLIB=ON                     \
-    -DENABLE_GOBJECT_INTROSPECTION=ON    \
-    -DENABLE_GTK_DOC=OFF                 \
-    -DENABLE_LIBOPENJPEG="openjpeg2"     \
-    -DENABLE_CMS="lcms2"                 \
-    -DENABLE_DCTDECODER="libjpeg"        \
-    -DENABLE_LIBCURL=OFF                 \
-    -DENABLE_ZLIB=ON                     \
-    -DENABLE_ZLIB_UNCOMPRESS=OFF         \
-    -DUSE_FLOAT=OFF                      \
-    -DBUILD_SHARED_LIBS=OFF              \
-    -DRUN_GPERF_IF_PRESENT=OFF           \
-    -DEXTRA_WARN=OFF                     \
-    -DWITH_JPEG=ON                       \
-    -DWITH_PNG=ON                        \
-    -DWITH_TIFF=ON                       \
-    -DWITH_NSS3=OFF                      \
-    -DWITH_Cairo=ON                      \
+    cmake -G "Ninja" -Wno-dev                \
+        -DCMAKE_BUILD_TYPE=Release           \
+        -DCMAKE_INSTALL_PREFIX="$TARGET"     \
+        -DENABLE_UNSTABLE_API_ABI_HEADERS=ON \
+        -DBUILD_GTK_TESTS=OFF                \
+        -DBUILD_QT5_TESTS=OFF                \
+        -DBUILD_GTK_TESTS=OFF                \
+        -DENABLE_QT5=OFF                     \
+        -DBUILD_CPP_TESTS=OFF                \
+        -DENABLE_SPLASH=ON                   \
+        -DENABLE_UTILS=OFF                   \
+        -DENABLE_CPP=ON                      \
+        -DENABLE_GLIB=ON                     \
+        -DENABLE_GOBJECT_INTROSPECTION=ON    \
+        -DENABLE_GTK_DOC=OFF                 \
+        -DENABLE_LIBOPENJPEG="openjpeg2"     \
+        -DENABLE_CMS="lcms2"                 \
+        -DENABLE_DCTDECODER="libjpeg"        \
+        -DENABLE_LIBCURL=OFF                 \
+        -DENABLE_ZLIB=ON                     \
+        -DENABLE_ZLIB_UNCOMPRESS=OFF         \
+        -DUSE_FLOAT=OFF                      \
+        -DBUILD_SHARED_LIBS=OFF              \
+        -DRUN_GPERF_IF_PRESENT=OFF           \
+        -DEXTRA_WARN=OFF                     \
+        -DWITH_JPEG=ON                       \
+        -DWITH_PNG=ON                        \
+        -DWITH_TIFF=ON                       \
+        -DWITH_NSS3=OFF                      \
+        -DWITH_Cairo=ON                      \
     ..
 
     cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (poppler)"
@@ -288,8 +284,9 @@ fi
 
 cd $BASE
 
-if (( ! $skipfontforge )) ; then
+if (( ! $nofontforge )) ; then
     log_note "*** Build fontforge $FONTFORGE_VERSION ***"
+
     # get fontforge
     if [ ! -f $FONTFORGE_SRC ]; then
         log_status "Getting fontforge source $FONTFORGE_SRC .."
@@ -297,42 +294,44 @@ if (( ! $skipfontforge )) ; then
     else
         log_status "Found fontforge source $FONTFORGE_SRC .."
     fi
+
     # unpack fontforge
     tar xf $FONTFORGE_SRC
     rm -rf fontforge
     mv fontforge-$FONTFORGE_VERSION fontforge
+
+    # build fontforge
     cd fontforge
     mkdir build
     cd build
-
-    cmake -G "Ninja" -Wno-dev          \
-    -DCMAKE_BUILD_TYPE=Release         \
-    -DCMAKE_INSTALL_PREFIX="$TARGET"   \
-    -DBUILD_SHARED_LIBS:BOOL=OFF       \
-    -DENABLE_GUI:BOOL=OFF              \
-    -DENABLE_X11:BOOL=OFF              \
-    -DENABLE_NATIVE_SCRIPTING:BOOL=ON  \
-    -DENABLE_PYTHON_SCRIPTING:BOOL=OFF \
-    -DENABLE_PYTHON_EXTENSION:AUTO=OFF \
-    -DENABLE_LIBSPIRO:BOOL=OFF         \
-    -DENABLE_LIBGIF:AUTO=OFF           \
-    -DENABLE_LIBJPEG:AUTO=ON           \
-    -DENABLE_LIBPNG:AUTO=ON            \
-    -DENABLE_LIBREADLINE:AUTO=OFF      \
-    -DENABLE_LIBTIFF:AUTO=ON           \
-    -DENABLE_WOFF2:AUTO=OFF            \
-    -DENABLE_DOCS:AUTO=OFF             \
-    -DENABLE_CODE_COVERAGE:BOOL=OFF    \
-    -DENABLE_DEBUG_RAW_POINTS:BOOL=OFF \
-    -DENABLE_FONTFORGE_EXTRAS:BOOL=OFF \
-    -DENABLE_MAINTAINER_TOOLS:BOOL=OFF \
-    -DENABLE_TILE_PATH:BOOL=OFF        \
-    -DENABLE_WRITE_PFM:BOOL=ON         \
-    -DENABLE_SANITIZER:ENUM="none"     \
-    -DENABLE_FREETYPE_DEBUGGER:PATH="" \
-    -DSPHINX_USE_VENV:BOOL=OFF         \
-    -DREAL_TYPE:ENUM="double"          \
-    -DTHEME:ENUM="tango"               \
+    cmake -G "Ninja" -Wno-dev              \
+        -DCMAKE_BUILD_TYPE=Release         \
+        -DCMAKE_INSTALL_PREFIX="$TARGET"   \
+        -DBUILD_SHARED_LIBS:BOOL=OFF       \
+        -DENABLE_GUI:BOOL=OFF              \
+        -DENABLE_X11:BOOL=OFF              \
+        -DENABLE_NATIVE_SCRIPTING:BOOL=ON  \
+        -DENABLE_PYTHON_SCRIPTING:BOOL=OFF \
+        -DENABLE_PYTHON_EXTENSION:AUTO=OFF \
+        -DENABLE_LIBSPIRO:BOOL=OFF         \
+        -DENABLE_LIBGIF:AUTO=OFF           \
+        -DENABLE_LIBJPEG:AUTO=ON           \
+        -DENABLE_LIBPNG:AUTO=ON            \
+        -DENABLE_LIBREADLINE:AUTO=OFF      \
+        -DENABLE_LIBTIFF:AUTO=ON           \
+        -DENABLE_WOFF2:AUTO=OFF            \
+        -DENABLE_DOCS:AUTO=OFF             \
+        -DENABLE_CODE_COVERAGE:BOOL=OFF    \
+        -DENABLE_DEBUG_RAW_POINTS:BOOL=OFF \
+        -DENABLE_FONTFORGE_EXTRAS:BOOL=OFF \
+        -DENABLE_MAINTAINER_TOOLS:BOOL=OFF \
+        -DENABLE_TILE_PATH:BOOL=OFF        \
+        -DENABLE_WRITE_PFM:BOOL=ON         \
+        -DENABLE_SANITIZER:ENUM="none"     \
+        -DENABLE_FREETYPE_DEBUGGER:PATH="" \
+        -DSPHINX_USE_VENV:BOOL=OFF         \
+        -DREAL_TYPE:ENUM="double"          \
+        -DTHEME:ENUM="tango"               \
     ..
 
     cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (fontforge)"
@@ -340,15 +339,16 @@ fi
 
 cd $BASE
 
+# build pdf2htmlEX (use -P -G if all before OK)
 log_note  "*** Build pdf2htmlEX.exe ***"
 cd pdf2htmlEX
 rm -rf build
 mkdir build
 cd build
 cmake -G "Ninja" -Wno-dev          \
-  -DCMAKE_BUILD_TYPE=Release       \
-  -DCMAKE_INSTALL_PREFIX="$TARGET" \
-  ..
+    -DCMAKE_BUILD_TYPE=Release       \
+    -DCMAKE_INSTALL_PREFIX="$TARGET" \
+..
 
 cmake --build ./ --target install || bail "ERROR!!: cmake --build ./ --target install (pdf2htmlEX)"
 cd $BASE
@@ -361,12 +361,7 @@ cd $BASE
 
 # copy folders
 log_status "Copying folders and libs need by pdf2htmlEX.exe "
-#cp -rf $TARGET/share/fontforge "$RELEASE/share/"
-#cp -rf $TARGET/share/locale "$RELEASE/share/"
-#cp -rf $TARGET/share/man "$RELEASE/share/"
-cp -Rf $TARGET/share/pdf2htmlEX "$RELEASE/bin/data"
-#rm -rf "$RELEASE/share/fontforge/prefs"
-#rm -Rf "$RELEASE/share/man"
+cp -Rvf $TARGET/share/pdf2htmlEX "$RELEASE/bin/data"
 rm -Rf "$RELEASE/bin/data/pkgconfig"
 
 cd $WORK
