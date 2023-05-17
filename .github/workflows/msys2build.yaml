@@ -58,7 +58,7 @@ jobs:
             harfbuzz:p
             ttfautohint:p
       - shell: msys2 {0}
-        run: sh mypdf2htmlbuild.sh --ghactions
-      - shell: cmd
-        run: |
-          ReleasePackage\bin\pdf2htmlEX.exe --version
+        run: sh mycolors.sh
+      #- shell: cmd
+        #run: |
+          #ReleasePackage\bin\pdf2htmlEX.exe --version

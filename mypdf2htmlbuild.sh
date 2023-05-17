@@ -1,6 +1,6 @@
 #!/bin/bash
-# pdf2htmlEX build script.
-# Use in MSYS2/MinGW-w64 for build pdf2htmlEX
+# pdf2htmlEX build script
+# Use in MSYS2 for build pdf2htmlEX for 32 and 64 bit
 # Author: Pablo González L
 
 # Green text
@@ -28,6 +28,7 @@ nopoppler=0
 nofontforge=0
 depsonly=0
 ghactions=0
+$popplerver
 
 function dohelp() {
     echo "Usage: `basename $0` [options]"
@@ -35,17 +36,20 @@ function dohelp() {
     echo "  -y, --yes                 Say yes to all build script prompts"
     echo "  -d, --depsonly            Only install dependencies for MSYS2"
     echo "  -g, --ghactions           Disable install local dependencies"
+    echo "  -p, --poppler <version>   Install poppler <version>"
     echo "  -P, --no-poppler          Skip build/install poppler"
     echo "  -F, --no-fontforge        Skip build/install fontforge"
     exit $1
 }
 
 # Retrieve input arguments to script
-optspec=":hydgpfPF-:"
+optspec=":hydgpp:f:PF-:"
 while getopts "$optspec" optchar; do
     case "${optchar}" in
         -)
             case "${OPTARG}" in
+                poppler)
+                    poppler=$popplerver ;;
                 no-poppler)
                     nopoppler=$((1-nopoppler)) ;;
                 no-fontforge)
@@ -62,6 +66,10 @@ while getopts "$optspec" optchar; do
                     log_error "Unknown option --${OPTARG}"
                     dohelp 1 ;;
             esac;;
+        p)
+            poppler=$popplerver
+            log_status "$popplerver"
+             ;;
         P)
             nopoppler=$((1-nopoppler)) ;;
         F)
@@ -79,6 +87,8 @@ while getopts "$optspec" optchar; do
             dohelp 1 ;;
     esac
 done
+
+exit
 
 # Tree for build/release (mmm use /tmp => pdf2htmlEX-win-64/ for release)
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -227,9 +237,11 @@ if (( ! $nopoppler )) ; then
     tar xf $POPPLER_VERSION.tar.xz
     rm -rf poppler
     mv $POPPLER_VERSION poppler
+
     # patch poppler (need test here for version number)
     log_status "Patch glib/poppler-private.h for $POPPLER_VERSION .."
     patch -b "poppler/glib/poppler-private.h" "patches/poppler-private-21.02.0.patch"
+
     # get poppler-data .tar.gz
     if [ ! -f $POPPLER_DATA.tar.gz ]; then
         log_status "Getting $POPPLER_DATA.tar.gz .."
@@ -255,6 +267,7 @@ if (( ! $nopoppler )) ; then
         -DBUILD_QT5_TESTS=OFF                \
         -DBUILD_GTK_TESTS=OFF                \
         -DENABLE_QT5=OFF                     \
+        -DENABLE_QT6=OFF                     \
         -DBUILD_CPP_TESTS=OFF                \
         -DENABLE_SPLASH=ON                   \
         -DENABLE_UTILS=OFF                   \
@@ -263,7 +276,7 @@ if (( ! $nopoppler )) ; then
         -DENABLE_GOBJECT_INTROSPECTION=ON    \
         -DENABLE_GTK_DOC=OFF                 \
         -DENABLE_LIBOPENJPEG="openjpeg2"     \
-        -DENABLE_CMS="lcms2"                 \
+        -DENABLE_CMS="none"                  \
         -DENABLE_DCTDECODER="libjpeg"        \
         -DENABLE_LIBCURL=OFF                 \
         -DENABLE_ZLIB=ON                     \
@@ -274,7 +287,7 @@ if (( ! $nopoppler )) ; then
         -DEXTRA_WARN=OFF                     \
         -DWITH_JPEG=ON                       \
         -DWITH_PNG=ON                        \
-        -DWITH_TIFF=ON                       \
+        -DWITH_TIFF=OFF                      \
         -DWITH_NSS3=OFF                      \
         -DWITH_Cairo=ON                      \
     ..
