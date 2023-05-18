@@ -20,7 +20,7 @@ jobs:
 
       - name: See java locations
         shell: pwsh
-        run:  Get-ChildItem Env: | Format-Table -Wrap -AutoSize
+        run:  Get-ChildItem Env:
 
       - name: Build pdf2htmlEX on msys2
         uses: msys2/setup-msys2@v2
