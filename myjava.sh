@@ -17,6 +17,21 @@ Note: Nedd defined $JAVA_HOME or set java.exe under PATH
 EOF
 echo "$usage"
 
+if [[ -n "$JAVA_HOME_8_X64" ]]; then
+JAVA_HOME_8_X64
+    echo "Se encontró definida la variable de entorno Windows: JAVA_HOME_8_X64."
+    echo "$JAVA_HOME_8_X64"
+    echo "Añadiendo ruta al ejecutable en MSYS2."
+    JAVA_HOME_8_X64=$(echo "$JAVA_HOME_8_X64" | sed -e 's/\\/\//g' -e 's/\([A-Z]\):/\/\L\1/' )
+    export PATH=$PATH:"$JAVA_HOME_8_X64/bin"
+    # Test
+    java -version
+fi
+
+exit 1
+
+
+
 
 # Si está definida en el entorno de variables Windows
 if [[ -n "$JAVA_HOME" ]]; then
