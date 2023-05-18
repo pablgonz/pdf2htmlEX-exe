@@ -18,10 +18,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: See java locations
-        shell: pwsh
-        run:  Get-ChildItem Env:
-
       - name: Build pdf2htmlEX on msys2
         uses: msys2/setup-msys2@v2
         with:
@@ -29,6 +25,7 @@ jobs:
           update: false
           install: >-
             diffutils findutils make patch tar pkgconf wget upx
+
           #pacboy: >-
             #gcc:p gmp:p ntldd-git:p gettext:p libiconv:p cmake:p
             #ninja:p ccache:p cc:p gobject-introspection:p
