@@ -18,9 +18,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set java location in file javalocation.txt
+      - name: See java locations
         shell: pwsh
-        run:  Get-Command java  | select Source > javalocation.txt
+        run:  Get-ChildItem Env: | Format-Table -Wrap -AutoSize
 
       - name: Build pdf2htmlEX on msys2
         uses: msys2/setup-msys2@v2
@@ -29,12 +29,12 @@ jobs:
           update: false
           install: >-
             diffutils findutils make patch tar pkgconf wget upx
-          pacboy: >-
-            gcc:p gmp:p ntldd-git:p gettext:p libiconv:p cmake:p
-            ninja:p ccache:p cc:p gobject-introspection:p
-            libspiro:p cairo:p zlib:p libpng:p giflib:p libjpeg-turbo:p
-            libxml2:p openjpeg2:p freetype:p fontconfig:p glib2:p
-            pixman:p harfbuzz:p ttfautohint:p
+          #pacboy: >-
+            #gcc:p gmp:p ntldd-git:p gettext:p libiconv:p cmake:p
+            #ninja:p ccache:p cc:p gobject-introspection:p
+            #libspiro:p cairo:p zlib:p libpng:p giflib:p libjpeg-turbo:p
+            #libxml2:p openjpeg2:p freetype:p fontconfig:p glib2:p
+            #pixman:p harfbuzz:p ttfautohint:p
       - shell: msys2 {0}
         run: sh myjava.sh
       #- shell: cmd
