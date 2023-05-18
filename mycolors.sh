@@ -112,32 +112,15 @@ done
 echo "popplerver: $popplerver"
 echo "fontforgever: $fontforgever"
 
-#command=`cmd //c 'REG QUERY HKCU\Environment -v PATH'| grep '^    PATH'| sed 's/    PATH    REG_EXPAND_SZ    //' | sed 's/;/\n/g' | grep 'java'`
-#echo "$command"
-#result=$(eval "$command")
-#echo "$result"
+echo "$JAVA_HOME"
 
-#!/bin/bash
+export PATH=$PATH:"$JAVA_HOME"
 
-#command=$(cmd //c 'REG QUERY HKCU\Environment -v PATH' | grep '^    PATH' | sed 's/    PATH    REG_EXPAND_SZ    //' | sed 's/;/\n/g' | grep 'java')
+echo "$JAVA_HOME"
 
-#if [[ -n "$command" ]]; then
-  ## Reemplazar la unidad de la ruta y cambiar las barras invertidas por barras diagonales
-  #command=${command^}
-  #command=${command/://}
-  #command=${command//\\//}
-  #command="/${command,,}"
-  #echo "$command"
-#else
-  #echo "No se encontró la ruta de Java en el registro."
-#fi
+#java -version
 
-#command=$(powershell -NoProfile -Command "(Get-ItemProperty -Path 'HKCU:\Environment' -Name 'Path').Path | Select-String -Pattern 'java'" | sed -e 's/\\/\//g' -e 's/^C:/\/c/')
-
-#echo "$command"
-
-
-
+#exit 1
 
 command=$(powershell -NoProfile -Command "(Get-ItemProperty -Path 'HKCU:\Environment' -Name 'Path').Path | Select-String -Pattern 'java'")
 
@@ -154,6 +137,8 @@ else
   echo "No se encontró la ruta de Java en el registro."
 fi
 
+# test
+java -version
 
 exit 1
 

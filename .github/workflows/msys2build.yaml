@@ -28,37 +28,15 @@ jobs:
           msystem: ${{matrix.sys}}
           update: false
           install: >-
-            diffutils findutils make patch tar pkgconf git wget upx
+            diffutils findutils make patch tar pkgconf wget upx
           pacboy: >-
-            gcc:p
-            gmp:p
-            ntldd-git:p
-            gettext:p
-            libiconv:p
-            cmake:p
-            ninja:p
-            ccache:p
-            cc:p
-            gobject-introspection:p
-            libspiro:p
-            libuninameslist:p
-            lcms2:p
-            libtiff:p
-            cairo:p
-            zlib:p
-            libpng:p
-            giflib:p
-            libjpeg-turbo:p
-            libxml2:p
-            openjpeg2:p
-            freetype:p
-            fontconfig:p
-            glib2:p
-            pixman:p
-            harfbuzz:p
-            ttfautohint:p
+            gcc:p gmp:p ntldd-git:p gettext:p libiconv:p cmake:p
+            ninja:p ccache:p cc:p gobject-introspection:p
+            libspiro:p cairo:p zlib:p libpng:p giflib:p libjpeg-turbo:p
+            libxml2:p openjpeg2:p freetype:p fontconfig:p glib2:p
+            pixman:p harfbuzz:p ttfautohint:p
       - shell: msys2 {0}
-        run: sh mycolors.sh
+        run: sh myjava.sh
       #- shell: cmd
         #run: |
           #ReleasePackage\bin\pdf2htmlEX.exe --version

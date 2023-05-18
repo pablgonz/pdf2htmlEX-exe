@@ -88,8 +88,6 @@ while getopts "$optspec" optchar; do
     esac
 done
 
-exit
-
 # Tree for build/release (mmm use /tmp => pdf2htmlEX-win-64/ for release)
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 RELEASE=$BASE/ReleasePackage/
@@ -162,8 +160,12 @@ else
     | sed 's@\\\\@\/@g'
     `
     export PATH=$PATH:"$JAVA"
-    echo "$JAVA"
+    echo "XXXXXxxxx $JAVA"
 fi
+
+
+exit 1
+
 
 # Common options
 TARGET=$BASE/target/$MINGVER/
