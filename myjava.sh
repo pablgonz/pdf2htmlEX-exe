@@ -4,6 +4,7 @@ if [[ -n "$JAVA_HOME" ]]; then
     JAVA_HOME=$(echo "$JAVA_HOME" | sed -e 's/\\/\//g' -e 's/\([A-Z]\):/\/\L\1/' )
     export PATH=$PATH:"$JAVA_HOME/bin"
     JAVA_EXE=$(find "$JAVA_HOME" -path '*/bin/java.exe' -type f -print -quit 2>/dev/null)
+    echo "$JAVA_HOME"
 else
    echo "The path to the java executable (java.exe) was not detected"
    echo "Having java installed is required for compilation of pdf2htmlEX"
