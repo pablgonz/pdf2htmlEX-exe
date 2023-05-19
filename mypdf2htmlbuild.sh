@@ -149,29 +149,36 @@ export FONTFORGE_VERSION=20230101
 FONTFORGE_SRC=$FONTFORGE_VERSION.tar.gz
 
 # Set JAVA for msys2
-if [ ! -f "$BASE/javalocation.txt" ]; then
-    log_status "The script will continue without detecting java, run:"
-    log_status "powershell -c \"Get-Command java  | select Source\" > javalocation.txt"
-    log_status "or set java in .profile"
+if [[ -n "$JAVA_HOME" ]]; then
+    echo "Se encontró definida la variable de entorno Windows: JAVA_HOME."
+    echo "Añadiendo ruta al ejecutable en MSYS2."
+    JAVA_HOME=$(echo "$JAVA_HOME" | sed -e 's/\\/\//g' -e 's/\([A-Z]\):/\/\L\1/' )
+    export PATH=$PATH:"$JAVA_HOME/bin"
+    # Test
+    java -version
+elif JAVA_PATH=$(powershell -NoProfile -Command "(Get-ItemProperty -Path 'HKCU:\Environment' -Name 'Path').Path | Select-String -Pattern 'java'"); then
+    JAVA_PATH=${JAVA_PATH#*: }
+    JAVA_PATH=$(echo "$JAVA_PATH" | sed -e 's/\\/\//g' -e 's/\([A-Z]\):/\/\L\1/' -e 's/;/\n/g' | grep -i 'java')
+
+    if [[ -n "$JAVA_PATH" ]]; then
+        echo "Se encontró la ruta del ejecutable de java en el PATH de Windows."
+        echo "Añadiendo ruta al ejecutable en MSYS2."
+        JAVA_PATH=$(echo "$JAVA_PATH" | head -n 1)
+        export PATH=$PATH:"$JAVA_PATH"
+        # Test
+        java -version
+    else
+        echo "No se encontró la ruta del ejecutable de java en el PATH de Windows."
+    fi
 else
-    log_status "The script set java from file"
-    JAVA=` cat javalocation.txt | grep java.exe | sed 's/java.exe//' \
-    | sed 's/Source//' | sed 's/------//' | sed 's/C\:/\/c/' \
-    | sed 's@\\\\@\/@g'
-    `
-    export PATH=$PATH:"$JAVA"
-    echo "XXXXXxxxx $JAVA"
+    echo "No se pudo añadir la ruta al ejecutable de java en MSYS2."
 fi
-
-
-exit 1
-
 
 # Common options
 TARGET=$BASE/target/$MINGVER/
 WORK=$BASE/work/$MINGVER/
 
-# Test for MINGW version
+# Test for MINGW version installed
 PMTEST="$BASE/.pacman-$MINGVER-installed"
 
 # Make output directories
@@ -205,15 +212,15 @@ else
         IOPTS="-S --noconfirm --needed"
 
         # Install MinGW related stuff
-        pacman $IOPTS $PMPREFIX-{gcc,gmp,ntldd-git,gettext,libiconv,cmake,ninja,ccache,cc,gobject-introspection}
+        pacman $IOPTS $PMPREFIX-{gcc,ntldd-git,gettext,libiconv,cmake,ninja,cc,gobject-introspection}
 
         # Install the base MSYS packages needed
-        pacman $IOPTS diffutils findutils make patch tar pkgconf git
+        pacman $IOPTS diffutils findutils make patch tar pkgconf
 
         # Libraries
         log_status "Installing precompiled devel libraries..."
-        pacman $IOPTS $PMPREFIX-{libspiro,libuninameslist,lcms2,libtiff,cairo,ttfautohint}
-        pacman $IOPTS $PMPREFIX-{zlib,libpng,giflib,libjpeg-turbo,libxml2,openjpeg2}
+        pacman $IOPTS $PMPREFIX-{libuninameslist,cairo,ttfautohint}
+        pacman $IOPTS $PMPREFIX-{zlib,libpng,libjpeg-turbo,libxml2,openjpeg2}
         pacman $IOPTS $PMPREFIX-{freetype,fontconfig,glib2,pixman,harfbuzz}
         touch $PMTEST
 
@@ -333,7 +340,7 @@ if (( ! $nofontforge )) ; then
         -DENABLE_LIBJPEG:AUTO=ON           \
         -DENABLE_LIBPNG:AUTO=ON            \
         -DENABLE_LIBREADLINE:AUTO=OFF      \
-        -DENABLE_LIBTIFF:AUTO=ON           \
+        -DENABLE_LIBTIFF:AUTO=OFF          \
         -DENABLE_WOFF2:AUTO=OFF            \
         -DENABLE_DOCS:AUTO=OFF             \
         -DENABLE_CODE_COVERAGE:BOOL=OFF    \
@@ -341,7 +348,7 @@ if (( ! $nofontforge )) ; then
         -DENABLE_FONTFORGE_EXTRAS:BOOL=OFF \
         -DENABLE_MAINTAINER_TOOLS:BOOL=OFF \
         -DENABLE_TILE_PATH:BOOL=OFF        \
-        -DENABLE_WRITE_PFM:BOOL=ON         \
+        -DENABLE_WRITE_PFM:BOOL=OFF        \
         -DENABLE_SANITIZER:ENUM="none"     \
         -DENABLE_FREETYPE_DEBUGGER:PATH="" \
         -DSPHINX_USE_VENV:BOOL=OFF         \
@@ -354,7 +361,7 @@ fi
 
 cd $BASE
 
-# build pdf2htmlEX (use -P -G if all before OK)
+# build pdf2htmlEX (use -P -F if all before OK)
 log_note  "*** Build pdf2htmlEX.exe ***"
 cd pdf2htmlEX
 rm -rf build
