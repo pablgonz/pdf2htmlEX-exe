@@ -14,7 +14,7 @@ fi
 echo "$JAVA_EXE"
 
 java -version
-exit 1
+exit 0
 
 
 
