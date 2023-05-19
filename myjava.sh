@@ -23,7 +23,7 @@ else
 fi
 
 java -version
-exit 1
+exit 0
 
 
 
