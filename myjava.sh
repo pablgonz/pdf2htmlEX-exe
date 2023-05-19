@@ -12,7 +12,7 @@ fi
 
 echo "$JAVA_EXE"
 
-java --version
+java -version
 exit 1
 
 
