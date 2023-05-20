@@ -252,11 +252,11 @@ else
         pacman $IOPTS diffutils findutils make patch pkgconf
 
         # Install MinGW related stuff
-        pacman $IOPTS $PMPREFIX-{gcc,ntldd,gettext,cmake,ninja,gobject-introspection-runtime,libpng,libjpeg-turbo,lcms2,xz,bzip2,pixman,fontconfig,brotli,lzo2,pcre2,libffi,ragel}
+        pacman $IOPTS --nodeps $PMPREFIX-{gcc,ntldd,gettext,cmake,ninja,gobject-introspection-runtime,libpng,libjpeg-turbo,lcms2,xz,bzip2,pixman,fontconfig,brotli,lzo2,pcre2,libffi,ragel}
 
         # Libraries
  #       log_status "Installing precompiled devel libraries..."
-        pacman $IOPTS $PMPREFIX-{libxml2,openjpeg2,freetype,cairo,ttfautohint}
+        pacman $IOPTS --nodeps $PMPREFIX-{libxml2,openjpeg2,freetype,cairo,ttfautohint}
 
         touch $PMTEST
 
