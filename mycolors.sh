@@ -268,10 +268,6 @@ else
     fi
 fi
 
-exit 0
-
-
-
 # Buid poppler
 if (( ! $nopoppler )) ; then
     log_note "*** Build poopler $POPPLER_VERSION ***"
