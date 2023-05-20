@@ -40,29 +40,28 @@ function is_release_date_iso() {
   return 0
 }
 
-# Set executable for JAVA
+# First we look for if the environment variable JAVA_HOME is defined in
+# Windows, otherwise we look for the executable in the PATH of Windows,
+# if found set it to MSYS2 (without this java cannot be executed).
 if [[ -n "$JAVA_HOME" ]]; then
-    JAVA_HOME=$(echo "$JAVA_HOME" | sed -e 's/\\/\//g' -e 's/\([A-Z]\):/\/\L\1/' )
-    export PATH=$PATH:"$JAVA_HOME/bin"
-    JAVA_EXE=$(find "$JAVA_HOME" -name 'java.exe' -type f -print -quit)
+    JAVA_HOME=$(echo "$JAVA_HOME" | sed -e 's/\\/\//g' -e 's/\([A-Z]\):/\/\L\1/g' )
+    export PATH="$PATH:$JAVA_HOME/bin"
+    #JAVA_EXEC=$(find "$JAVA_HOME" -name 'java.exe' -type f -print -quit)
+    JAVA_VER=$(java -version 2>&1 | head -n 1)
+
 else
-    JAVA_PATH=$(powershell -NoProfile -Command "(Get-ItemProperty -Path 'HKCU:\Environment' -Name 'Path').Path | Select-String -Pattern 'java'")
-
-    if [[ -n "$JAVA_PATH" ]]; then
-        JAVA_PATH=$(echo "$JAVA_PATH" | sed -e 's/\\/\//g' -e 's/\([A-Z]\):/\/\L\1/' -e 's/;/\n/g' | grep -i 'java' | sed 's/^[^\/]*\///')
-
-        if [[ -n "$JAVA_PATH" ]]; then
-            JAVA_PATH=$(echo "$JAVA_PATH" | head -n 1)
-            export PATH=$PATH:"$JAVA_PATH"
-            JAVA_EXE=$(find "$JAVA_PATH" -name 'java.exe' -type f -print -quit)
-        fi
+    JAVA_HOME=$(powershell -NoProfile -Command "(Get-ItemProperty -Path 'HKCU:\Environment' -Name 'Path').Path | Select-String -Pattern 'java'")
+    if [[ -n "$JAVA_HOME" ]]; then
+        JAVA_HOME=$(echo "$JAVA_HOME" | sed -e 's/\([A-Z]\):/\/\L\1/g' -e 's/\\/\//g' -e 's/;/\n/g'  | grep -i 'java')
+        export PATH="$PATH:$JAVA_HOME"
+        #JAVA_EXEC=$(find "$JAVA_HOME" -name 'java.exe' -type f -print -quit)
+        JAVA_VER=$(java -version 2>&1 | head -n 1)
     fi
 fi
 
-if [[ -n "$JAVA_EXE" ]]; then
-    echo "$JAVA_EXE"
-else
-    echo "The path to the java executable was not detected"
+# Test if $JAVA_VER found for --help information
+if [[ -z "$JAVA_VER" ]]; then
+    JAVA_VER="NOT detect java detected/installed"
 fi
 
 # Variables
@@ -89,7 +88,7 @@ Usage: `basename $0` [options]
 
 poppler: $popplerver
 fontforge: $fontforgever
-java: "$JAVA_EXE"
+$JAVA_VER
 EOF
 echo "$usage"
 exit "$1"
@@ -151,11 +150,6 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
-
-
-# exit 1
-
-
 
 # Tree for build/release (mmm use /tmp => pdf2htmlEX-win-64/ for release)
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -521,4 +515,4 @@ fi
 # Finish
 log_note "*** Finish!!! ***"
 
-exit 1
+exit 0
