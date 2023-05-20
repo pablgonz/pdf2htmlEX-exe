@@ -248,17 +248,16 @@ else
         pacman -Sy --noconfirm
         IOPTS="-S --noconfirm --needed"
 
-        # Install MinGW related stuff
-        pacman $IOPTS $PMPREFIX-{gcc,ntldd-git,gettext,libiconv,cmake,ninja,cc,gobject-introspection}
-
         # Install the base MSYS packages needed
-        pacman $IOPTS diffutils findutils make patch tar pkgconf
+        pacman $IOPTS diffutils findutils make patch pkgconf
+
+        # Install MinGW related stuff
+        pacman $IOPTS $PMPREFIX-{gcc,ntldd,gettext,cmake,ninja,gobject-introspection-runtime,libpng,libjpeg-turbo,lcms2,xz,bzip2,pixman,fontconfig,brotli,lzo2,pcre2,libffi,ragel}
 
         # Libraries
-        log_status "Installing precompiled devel libraries..."
-        pacman $IOPTS $PMPREFIX-{libuninameslist,cairo,ttfautohint}
-        pacman $IOPTS $PMPREFIX-{zlib,libpng,libjpeg-turbo,libxml2,openjpeg2}
-        pacman $IOPTS $PMPREFIX-{freetype,fontconfig,glib2,pixman,harfbuzz}
+ #       log_status "Installing precompiled devel libraries..."
+        pacman $IOPTS $PMPREFIX-{libxml2,openjpeg2,freetype,cairo,ttfautohint}
+
         touch $PMTEST
 
         log_note "Finished installing precompiled libraries!"
@@ -268,6 +267,10 @@ else
         log_note "  this is not the case."
     fi
 fi
+
+exit 0
+
+
 
 # Buid poppler
 if (( ! $nopoppler )) ; then
