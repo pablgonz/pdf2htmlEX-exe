@@ -273,7 +273,7 @@ else
         IOPTS="-S --noconfirm --needed"
 
         # Install the base MSYS packages needed
-        pacman $IOPTS diffutils findutils make patch pkgconf
+        pacman $IOPTS diffutils findutils make patch pkgconf upx
 
         # Install MinGW related stuff
         pacman $IOPTS $PMPREFIX-{gcc,ntldd,gettext,cmake,ninja,gobject-introspection-runtime,libpng,libjpeg-turbo,lcms2,xz,bzip2,pixman,fontconfig,brotli,lzo2,pcre2,libffi,ragel}
