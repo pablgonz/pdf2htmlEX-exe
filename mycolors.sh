@@ -552,7 +552,7 @@ cd $BASE
 if (( ! $noupx )) && [ "$MSYSTEM" != "MINGW32" ]; then
     log_note "Compress generated .dll and executable files using upx ..."
     cd "$RELEASE/bin"
-    for f in *.{dll, exe} ; do
+    for f in *.{dll,exe}; do
         upx -qq --best --ultra-brute "$f"
     done
     cd $BASE
