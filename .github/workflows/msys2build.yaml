@@ -13,6 +13,7 @@ jobs:
         sys:
           - mingw64
           - mingw32
+          - ucrt64
 
     steps:
       - name: Checkout

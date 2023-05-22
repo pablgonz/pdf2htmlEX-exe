@@ -1,4 +1,33 @@
 #!/bin/bash
+
+fontforge_file="fontforge/build/inc/fontforge-config.h"
+if [[ -f "$config_file" ]]; then
+    version_line=$(grep -oP '#define FONTFORGE_VERSION "\K[^"]+' "$fontforge_file")
+    export FONTFORGE_VERSION="$version_line"
+fi
+
+echo "$FONTFORGE_VERSION"
+
+# Capture poppler version (for -P option)
+poppler_file="poppler/build/cpp/poppler-version.h"
+if [[ -f "$poppler_file" ]]; then
+    version_line=$(grep -oP '#define POPPLER_VERSION "\K[^"]+' "$poppler_file")
+    export POPPLER_VERSION="$version_line"
+
+fi
+
+echo "$POPPLER_VERSION"
+exit 0
+
+
+
+
+
+
+
+
+
+#!/bin/bash
 # Set executable for JAVA
 #
 # First we look for if the environment variable JAVA_HOME is defined in
@@ -13,8 +42,12 @@ if [[ -n "$JAVA_HOME" ]]; then
 else
     JAVA_HOME=$(powershell -NoProfile -Command "(Get-ItemProperty -Path 'HKCU:\Environment' -Name 'Path').Path | Select-String -Pattern 'java'")
     if [[ -n "$JAVA_HOME" ]]; then
-        JAVA_HOME=$(echo "$JAVA_HOME" | sed -e 's/\([A-Z]\):/\/\L\1/g' -e 's/\\/\//g' -e 's/;/\n/g'  | grep -i 'java')
-        export PATH="$PATH:$JAVA_HOME"
+        #JAVA_HOME=$(echo "$JAVA_HOME")
+        #echo "JAVA-HOME-BEFORE: $JAVA_HOME"
+
+        JAVA_HOME=$(echo "$JAVA_HOME" | sed -e 's/\\/\//g' -e 's/\([A-Z]\):/\/\L\1/g' -e 's/;/\n/g' | grep -i 'java')
+        echo "JAVA-HOME-AFTER: $JAVA_HOME"
+        #export PATH="$PATH:$JAVA_HOME"
         JAVA_EXEC=$(find "$JAVA_HOME" -name 'java.exe' -type f -print -quit)
         JAVA_VER=$(java -version 2>&1 | head -n 1)
     fi
@@ -26,6 +59,37 @@ if [[ -z "$JAVA_VER" ]]; then
 fi
 
 exit 0
+
+Hola, sabes quiero añadir algo a mi script bash, tengo un archivo `fontforge/build/inc/fontforge-config.h`
+y sie este existe quisiera capturar la línea `#define FONTFORGE_VERSION "20230101"` y quedarma solo con
+`20230101` y guardarlo en una variable de nombre FONTFORGE_VERSION dentro de mi scrip, el archivo `fontforge-config.h`
+es más menos así:
+
+```
+#ifndef FONTFORGE_CONFIG_H
+#define FONTFORGE_CONFIG_H
+
+/* The tagged version of FontForge. Additional versioning information in fontforge-version-extras.h */
+#define FONTFORGE_VERSION "20230101"
+
+/* The install prefix configured at configure/compile time, used as a last resort */
+#define FONTFORGE_INSTALL_PREFIX "D:/msys64/home/pablg/pdf2htmlEX-exe/target/mingw64"
+
+#define SERIF_UI_FAMILIES "serif"
+#define SANS_UI_FAMILIES  "system-ui,Deja Vu Sans,Calibri"
+#define LABEL_UI_FAMILIES "Deja Vu Sans,Calibri,unifont,unifont upper"
+#define MONO_UI_FAMILIES  "monospace,unifont"
+```
+Puedes darme un ejemplo de como hacer esto?
+
+
+
+
+
+Cuando está minimizado falla :(
+$ ./myjava.sh
+JAVA-HOME-AFTER: Files/Java/jre1.8.0_361/bin
+find: ‘Files/Java/jre1.8.0_361/bin’: No such file or directory
 
 
 

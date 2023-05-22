@@ -3,6 +3,14 @@
 # Build pdf2htmlEX for 32 and 64 bit under MSYS2
 # Author: Pablo González L
 
+# Globlal vars
+PDF2HTMLEX_VERSION=0.18.8.rc1
+POPPLER_DATA=poppler-data-0.4.12
+
+# Set by CLI before
+POPPLER_VERSION="21.02.0"
+FONTFORGE_VERSION="20230101"
+
 # Green text
 function log_note() {
     echo -ne "\e[32m"; echo "$@"; echo -ne "\e[0m"
@@ -11,12 +19,11 @@ function log_note() {
 function log_status() {
     echo -ne "\e[33m"; echo "$@"; echo -ne "\e[0m"
 }
-
+# Red text
 function bail () {
     echo -ne "\e[31m\e[1m"; echo "!!! Build failed at: ${@}"; echo -ne "\e[0m"
     exit 1
 }
-
 # Red text
 function log_error() {
     echo -ne "\e[31m"; echo "$@"; echo -ne "\e[0m"
@@ -47,34 +54,34 @@ if [[ -n "$JAVA_HOME" ]]; then
     JAVA_HOME=$(echo "$JAVA_HOME" | sed -e 's/\\/\//g' -e 's/\([A-Z]\):/\/\L\1/g' )
     export PATH="$PATH:$JAVA_HOME/bin"
     #JAVA_EXEC=$(find "$JAVA_HOME" -name 'java.exe' -type f -print -quit)
-    JAVA_VER=$(java -version 2>&1 | head -n 1)
+    JAVA_VERSION=$(java -version 2>&1 | head -n 1)
 
 else
     JAVA_HOME=$(powershell -NoProfile -Command "(Get-ItemProperty -Path 'HKCU:\Environment' -Name 'Path').Path | Select-String -Pattern 'java'")
     if [[ -n "$JAVA_HOME" ]]; then
-        JAVA_HOME=$(echo "$JAVA_HOME" | sed -e 's/\([A-Z]\):/\/\L\1/g' -e 's/\\/\//g' -e 's/;/\n/g'  | grep -i 'java')
+        JAVA_HOME=$(echo "$JAVA_HOME" | sed -e 's/\([A-Z]\):/\/\L\1/g' -e 's/\\/\//g' -e 's/;/\n/g' | grep -i 'java')
         export PATH="$PATH:$JAVA_HOME"
         #JAVA_EXEC=$(find "$JAVA_HOME" -name 'java.exe' -type f -print -quit)
-        JAVA_VER=$(java -version 2>&1 | head -n 1)
+        JAVA_VERSION=$(java -version 2>&1 | head -n 1)
     fi
 fi
 
-# Test if $JAVA_VER found for --help information
-if [[ -z "$JAVA_VER" ]]; then
-    JAVA_VER="NOT detect java detected/installed"
+# Test if $JAVA_VERSION found for --help information and reset var
+if [[ -z "$JAVA_VERSION" ]]; then
+    JAVA_VERSION="NOT detect java installed in your system"
 fi
 
-# Variables
+# Vars defined for script execution
 yes=0
 nopoppler=0
 nofontforge=0
+noupx=0
 depsonly=0
 ghactions=0
-popplerver="21.02.0"
-fontforgever="20230101"
 
 function dohelp() {
 read -r -d '' usage <<-EOF
+Build script for pdf2htmEX version $PDF2HTMLEX_VERSION under MSYS2 (32/64/ucrt)
 Usage: `basename $0` [options]
 
     -h, --help                Prints this help message
@@ -85,10 +92,12 @@ Usage: `basename $0` [options]
     -f, --fontforge <version> Install poppler <version>
     -F, --no-fontforge        Skip build/install fontforge
     -P, --no-poppler          Skip build/install poppler
+    -U, --no-upx-commpres     Don't commpres .dll/.exe (64-bit/ucrt only)
 
-poppler: $popplerver
-fontforge: $fontforgever
-$JAVA_VER
+Default:
+poppler version "$POPPLER_VERSION"
+fontforge version "$FONTFORGE_VERSION"
+$JAVA_VERSION
 EOF
 echo "$usage"
 exit "$1"
@@ -121,7 +130,7 @@ while [[ $# -gt 0 ]]; do
                 log_error "Invalid value for --poppler: $2 (must be numeric)"
                 dohelp 1
             fi
-            popplerver="$2"
+            POPPLER_VERSION="$2"
             shift 2
             ;;
         -f|--fontforge)
@@ -133,7 +142,7 @@ while [[ $# -gt 0 ]]; do
                 log_error "Invalid value for --fontforge: $2 (must be YYYYMMDD)"
                 dohelp 1
             fi
-            fontforgever="$2"
+            FONTFORGE_VERSION="$2"
             shift 2
             ;;
         -P|--no-poppler)
@@ -144,6 +153,10 @@ while [[ $# -gt 0 ]]; do
             nofontforge=$((1-nofontforge))
             shift
             ;;
+        -U|--no-upx-commpres)
+            noupx=$((1-noupx))
+            shift
+            ;;
         *)
             log_error "Unknown option: $1"
             dohelp 1
@@ -151,7 +164,48 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Determine if we're building 32 or 64 bit.
+if [ "$MSYSTEM" = "MINGW32" ]; then
+    log_note "Building 32-bit version!"
+    ARCHNUM="32"
+    MINGVER=mingw32
+    MINGOTHER=mingw64
+    HOST="--build=i686-w64-mingw32 --host=i686-w64-mingw32 --target=i686-w64-mingw32"
+    PMARCH=i686
+    PMPREFIX="mingw-w64-$PMARCH"
+
+elif [ "$MSYSTEM" = "MINGW64" ]; then
+    log_note "Building 64-bit version!"
+    ARCHNUM="64"
+    MINGVER=mingw64
+    MINGOTHER=mingw32
+    HOST="--build=x86_64-w64-mingw32 --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32"
+    PMARCH=x86_64
+    PMPREFIX="mingw-w64-$PMARCH"
+
+elif [ "$MSYSTEM" = "UCRT64" ]; then
+    log_note "Building 64-bit ucrt version!"
+    ARCHNUM="64"
+    MINGVER=ucrt64
+    MINGOTHER=mingw32
+    HOST="--build=x86_64-w64-mingw32 --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32"
+    PMARCH=ucrt-x86_64
+    PMPREFIX="mingw-w64-$PMARCH"
+
+else
+    bail "Unknown build system!"
+fi
+
+# Reset PDF2HTMLEX_VERSION for .exe
+if [ "$MSYSTEM" = "UCRT64" ]; then
+    PDF2HTMLEX_VERSION=$(echo "$PDF2HTMLEX_VERSION" \($ARCHNUM-bit-ucrt64\))
+else
+    PDF2HTMLEX_VERSION=$(echo "$PDF2HTMLEX_VERSION" \($ARCHNUM-bit\))
+fi
+
 # Tree for build/release (mmm use /tmp => pdf2htmlEX-win-64/ for release)
+# Quizas pueda quitar el directorio y luego usar un archivo .zip
+# algo del estilo pdf2htmlEX-win-64.zip y evitar git al cambiar de arquitectura
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 RELEASE=$BASE/ReleasePackage/
 
@@ -178,40 +232,10 @@ function detect_arch_switch () {
     touch $to
 }
 
-# Determine if we're building 32 or 64 bit.
-if [ "$MSYSTEM" = "MINGW32" ]; then
-    log_note "Building 32-bit version!"
-
-    ARCHNUM="32"
-    MINGVER=mingw32
-    MINGOTHER=mingw64
-    HOST="--build=i686-w64-mingw32 --host=i686-w64-mingw32 --target=i686-w64-mingw32"
-    PMARCH=i686
-    PMPREFIX="mingw-w64-$PMARCH"
-elif [ "$MSYSTEM" = "MINGW64" ]; then
-    log_note "Building 64-bit version!"
-
-    ARCHNUM="64"
-    MINGVER=mingw64
-    MINGOTHER=mingw32
-    HOST="--build=x86_64-w64-mingw32 --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32"
-    PMARCH=x86_64
-    PMPREFIX="mingw-w64-$PMARCH"
-else
-    bail "Unknown build system!"
-fi
-
 # Early detection
 detect_arch_switch $MINGVER
 
-# Globlal vars
-export PDF2HTMLEX_VERSION=0.18.8.rc1-"($ARCHNUM-bit)"
-export POPPLER_VERSION=poppler-21.02.0
-export POPPLER_DATA=poppler-data-0.4.12
-export FONTFORGE_VERSION=20230101
-FONTFORGE_SRC=$FONTFORGE_VERSION.tar.gz
-
-# Common options
+# Dirs for operations
 TARGET=$BASE/target/$MINGVER/
 WORK=$BASE/work/$MINGVER/
 
@@ -244,7 +268,7 @@ if (( $ghactions )); then
     log_status "Installing MSYS and MinGW libraries done by ghactions"
 else
     if (( !$depsonly )) && [ ! -f $PMTEST ]; then
-        log_status "First time run; installing MSYS and MinGW libraries..."
+        log_status "First time run; installing packages for MSYS and MinGW..."
         pacman -Sy --noconfirm
         IOPTS="-S --noconfirm --needed"
 
@@ -252,25 +276,27 @@ else
         pacman $IOPTS diffutils findutils make patch pkgconf
 
         # Install MinGW related stuff
-        pacman $IOPTS --nodeps --asdeps $PMPREFIX-{gcc,ntldd,gettext,cmake,ninja,gobject-introspection-runtime,libpng,libjpeg-turbo,lcms2,xz,bzip2,pixman,fontconfig,brotli,lzo2,pcre2,libffi,ragel}
+        pacman $IOPTS $PMPREFIX-{gcc,ntldd,gettext,cmake,ninja,gobject-introspection-runtime,libpng,libjpeg-turbo,lcms2,xz,bzip2,pixman,fontconfig,brotli,lzo2,pcre2,libffi,ragel}
 
         # Libraries
- #       log_status "Installing precompiled devel libraries..."
-        pacman $IOPTS --nodeps --asdeps $PMPREFIX-{libxml2,openjpeg2,freetype,cairo,ttfautohint}
-
+        pacman $IOPTS $PMPREFIX-{libxml2,openjpeg2,freetype,cairo,ttfautohint}
+        # Save test file
         touch $PMTEST
 
-        log_note "Finished installing precompiled libraries!"
+        log_note "Finished installing packages for MSYS and MinGW!"
     else
-        log_note "Detected that precompiled libraries are already installed."
-        log_note "  Delete '$PMTEST' and run this script again if"
-        log_note "  this is not the case."
+        log_note "Detected that packages for MSYS and MinGW are already installed."
+        log_note "execute 'rm -rf $PMTEST' and run this script again if"
+        log_note "this is not the case."
     fi
 fi
 
-# Buid poppler
+# Build poppler
 if (( ! $nopoppler )) ; then
-    log_note "*** Build poopler $POPPLER_VERSION ***"
+    # Set version poppler for download
+    POPPLER_VERSION=$(echo "poppler-$POPPLER_VERSION")
+
+    log_note "*** Build $POPPLER_VERSION ***"
 
     if [ ! -f "$BASE/$POPPLER_VERSION.tar.xz" ]; then
         log_status "Getting $POPPLER_VERSION.tar.xz .."
@@ -278,6 +304,7 @@ if (( ! $nopoppler )) ; then
     else
         log_status "Found $POPPLER_VERSION.tar.xz .."
     fi
+
     # unpack poppler
     tar xf $POPPLER_VERSION.tar.xz
     rm -rf poppler
@@ -342,7 +369,19 @@ fi
 
 cd $BASE
 
+# Capture poppler version (for -P option) and reset $POPPLER_VERSION var
+poppler_file="poppler/build/cpp/poppler-version.h"
+if [[ -f "$poppler_file" ]]; then
+    version_line=$(grep -oP '#define POPPLER_VERSION "\K[^"]+' "$poppler_file")
+    export POPPLER_VERSION="$version_line"
+
+fi
+
+# Build fontforge
 if (( ! $nofontforge )) ; then
+    # Set FONTFORGE_SRC for download
+    FONTFORGE_SRC=$FONTFORGE_VERSION.tar.gz
+
     log_note "*** Build fontforge $FONTFORGE_VERSION ***"
 
     # get fontforge
@@ -397,13 +436,20 @@ fi
 
 cd $BASE
 
-# build pdf2htmlEX (use -P -F if all before OK)
-log_note  "*** Build pdf2htmlEX.exe ***"
+# Capture fontforge version (for -F option) and reset FONTFORGE_VERSION var
+config_file="fontforge/build/inc/fontforge-config.h"
+if [[ -f "$config_file" ]]; then
+    version_line=$(grep '#define FONTFORGE_VERSION' "$config_file" | awk '{print $3}' | tr -d '"')
+    export FONTFORGE_VERSION="$version_line"
+fi
+
+# Build pdf2htmlEX (use -P -F if all before are OK)
+log_note  "*** Build pdf2htmlEX $PDF2HTMLEX_VERSION ***"
 cd pdf2htmlEX
 rm -rf build
 mkdir build
 cd build
-cmake -G "Ninja" -Wno-dev          \
+cmake -G "Ninja" -Wno-dev            \
     -DCMAKE_BUILD_TYPE=Release       \
     -DCMAKE_INSTALL_PREFIX="$TARGET" \
 ..
@@ -418,7 +464,7 @@ make "-j $(nproc)" -s install prefix="$TARGET" datadir="$TARGET/share/pdf2htmlEX
 cd $BASE
 
 # copy folders
-log_status "Copying folders and libs need by pdf2htmlEX.exe "
+log_status "Copying files and dirs need by pdf2htmlEX.exe "
 cp -Rvf $TARGET/share/pdf2htmlEX "$RELEASE/bin/data"
 rm -Rf "$RELEASE/bin/data/pkgconfig"
 
@@ -440,7 +486,7 @@ fflibs=`ntldd -D "$(dirname \"${ffex}\")" -R "$ffex" \
 for f in $fflibs; do
     filename="$(basename $f)"
     filenoext="${filename%.*}"
-    strip "$f" -svo "$RELEASE/bin/$filename"
+    strip "$f" -so "$RELEASE/bin/$filename"
 done
 
 # copy libs gettext
@@ -458,7 +504,7 @@ msmglibs=`ntldd -D "$(dirname \"${msgmex}\")" -R "$msgmex" \
 for f in $msmglibs; do
     filename="$(basename $f)"
     filenoext="${filename%.*}"
-    strip "$f" -svo "$RELEASE/bin/$filename"
+    strip "$f" -so "$RELEASE/bin/$filename"
 done
 
 # copy libs pdf2htmlEX
@@ -477,10 +523,11 @@ pdf2htmlexlibs=`ntldd -D "$(dirname \"${pdf2htmlEXex}\")" -R "$pdf2htmlEXex" \
 for f in $pdf2htmlexlibs; do
     filename="$(basename $f)"
     filenoext="${filename%.*}"
-    strip "$f" -svo "$RELEASE/bin/$filename"
+    strip "$f" -so "$RELEASE/bin/$filename"
 done
 
 # copy libs ttfautohint
+log_status "Copying files need by ttfautohint.exe "
 ttfautohintex=`which ttfautohint.exe`
 TTFAUTOROOT=`cygpath -w $(dirname "${ttfautohintex}")`
 strip "$ttfautohintex" -so "$RELEASE/bin/ttfautohint.exe"
@@ -496,16 +543,16 @@ ttfautohintlibs=`ntldd -D "$(dirname \"${ttfautohintex}\")" -R "$ttfautohintex" 
 for f in $ttfautohintlibs; do
     filename="$(basename $f)"
     filenoext="${filename%.*}"
-    strip "$f" -svo "$RELEASE/bin/$filename"
+    strip "$f" -so "$RELEASE/bin/$filename"
 done
 
 cd $BASE
 
-# Only 64-bit support upx commpress
-if [ "$MSYSTEM" = "MINGW64" ] ; then
-    log_note "Compress generated lib and executable files using upx ..."
+# Only 64-bit and ucrt support upx commpress
+if (( ! $noupx )) && [ "$MSYSTEM" != "MINGW32" ]; then
+    log_note "Compress generated .dll and executable files using upx ..."
     cd "$RELEASE/bin"
-    for f in *.{dll,exe}; do
+    for f in *.{dll, exe} ; do
         upx -qq --best --ultra-brute "$f"
     done
     cd $BASE

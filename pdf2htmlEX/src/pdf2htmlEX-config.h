@@ -15,7 +15,7 @@
 
 namespace pdf2htmlEX {
 
-static const std::string PDF2HTMLEX_VERSION = "0.18.8.rc1-(64-bit)";
+static const std::string PDF2HTMLEX_VERSION = "";
 static const std::string PDF2HTMLEX_PREFIX = "D:/msys64/home/pablg/pdf2htmlEX-exe/target/mingw64";
 static const std::string PDF2HTMLEX_DATA_PATH = "D:/msys64/home/pablg/pdf2htmlEX-exe/target/mingw64""/share/pdf2htmlEX";
 
